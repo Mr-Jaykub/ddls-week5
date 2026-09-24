@@ -35,6 +35,7 @@
         <div id="cells" class="mt-3 max-h-72 overflow-auto text-xs"></div>
       </aside>
       <section class="min-w-0 rounded-xl bg-white p-2 shadow-sm sm:p-4">
+        <div id="legend" class="mb-2 text-sm text-slate-600"></div>
         <div id="plot" class="h-[60vh] min-h-[ twentyrem ]"></div>
         <div id="cellPlot" class="mt-4 h-72"></div>
       </section>
@@ -57,6 +58,7 @@ async function draw() {
   const [u, c] = await Promise.all([get(`/api/umap?color=${encodeURIComponent(colour)}`), get(`/api/cluster/${cluster}${gene ? `?gene=${encodeURIComponent(gene)}` : ''}`)]);
   const points = u.points;
   const numeric = u.numeric;
+  document.querySelector('#legend').innerHTML = numeric ? `<span class="font-medium">Legend:</span> colour scale shows ${colour}` : `<span class="font-medium">Legend:</span> each colour represents a cluster; hover over a point for the cluster label`;
   Plotly.newPlot('plot', [{x: points.map(p=>p.x), y: points.map(p=>p.y), text: points.map(p=>p.cell), customdata: points.map(p=>[p.cluster, p.value]), mode:'markers', type:'scattergl', marker:{size:6, color:numeric ? points.map(p=>p.value) : points.map(p=>p.cluster), colorscale:'Viridis', showscale:numeric, colorbar:numeric ? {title: colour} : undefined}, hovertemplate:'cell %{text}<br>cluster %{customdata[0]}<br>value %{customdata[1]}<extra></extra>'}], {title:`UMAP (display only) — colour: ${colour}`, margin:{t:40,l:40,r:10,b:40}, xaxis:{title:'UMAP 1'}, yaxis:{title:'UMAP 2'}});
   const q = c.quality;
   document.querySelector('#summary').innerHTML = `<b>Cluster ${cluster}</b><br>${q.length} cells<br>Top markers: ${c.top_markers.join(', ')}`;
