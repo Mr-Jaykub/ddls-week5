@@ -97,9 +97,9 @@ def cluster(cluster: str, gene: str | None = None):
         in_rest = np.asarray(rest_values[:, gene_idx].toarray() if hasattr(rest_values[:, gene_idx], "toarray") else rest_values[:, gene_idx]).ravel()
         marker_rows.append({
             "gene": gene,
-            "score": float(scores[gene][i]) if scores is not None else None,
-            "logfoldchange": float(logfoldchanges[gene][i]) if logfoldchanges is not None else None,
-            "pvals_adj": float(pvals_adj[gene][i]) if pvals_adj is not None else None,
+            "score": float(scores[cluster][i]) if scores is not None else None,
+            "logfoldchange": float(logfoldchanges[cluster][i]) if logfoldchanges is not None else None,
+            "pvals_adj": float(pvals_adj[cluster][i]) if pvals_adj is not None else None,
             "cluster_detection_pct": float((in_cluster > 0).mean() * 100),
             "rest_detection_pct": float((in_rest > 0).mean() * 100),
             "cluster_median": float(np.median(in_cluster)),
