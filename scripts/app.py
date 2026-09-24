@@ -1,0 +1,80 @@
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+import numpy as np
+import scanpy as sc
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+
+DATA_PATH = Path("data/pbmc3k.h5ad")
+adata = None
+
+
+def _cluster_mask(cluster: str):
+    if cluster not in set(adata.obs["leiden"].astype(str)):
+        raise HTTPException(status_code=404, detail=f"Unknown cluster: {cluster}")
+    return adata.obs["leiden"].astype(str).to_numpy() == cluster
+
+
+def _expression_vector(gene: str):
+    matches = np.flatnonzero(adata.var_names.to_numpy() == gene)
+    if len(matches) == 0:
+        raise HTTPException(status_code=404, detail=f"Unknown gene: {gene}")
+    values = adata[:, matches[0]].X
+    return np.asarray(values.toarray() if hasattr(values, "toarray") else values).ravel()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global adata
+    adata = sc.read_h5ad(DATA_PATH)
+    yield
+    adata = None
+
+
+app = FastAPI(title="PBMC cluster explorer", lifespan=lifespan)
+
+
+@app.get("/", response_class=HTMLResponse)
+def index():
+    return HTMLResponse((Path(__file__).parent / "index.html").read_text())
+
+
+@app.get("/api/meta")
+def meta():
+    return {"clusters": sorted(adata.obs["leiden"].astype(str).unique()), "genes": adata.var_names.tolist()}
+
+
+@app.get("/api/umap")
+def umap(cluster: str | None = None):
+    mask = np.ones(adata.n_obs, dtype=bool) if cluster is None else _cluster_mask(cluster)
+    coords = np.asarray(adata.obsm["X_umap"])[mask]
+    labels = adata.obs["leiden"].astype(str).to_numpy()[mask]
+    return {"points": [{"cell": str(cell), "x": float(x), "y": float(y), "cluster": label} for cell, (x, y), label in zip(adata.obs_names[mask], coords, labels)]}
+
+
+@app.get("/api/expression/{gene}")
+def expression(gene: str):
+    values = _expression_vector(gene)
+    labels = adata.obs["leiden"].astype(str).to_numpy()
+    return {"gene": gene, "values": [{"cell": str(cell), "cluster": cluster, "value": float(value)} for cell, cluster, value in zip(adata.obs_names, labels, values)]}
+
+
+@app.get("/api/cluster/{cluster}")
+def cluster(cluster: str, gene: str | None = None):
+    mask = _cluster_mask(cluster)
+    idx = np.flatnonzero(mask)
+    result = {
+        "cluster": cluster,
+        "quality": [{"cell": str(adata.obs_names[i]), "n_genes": float(adata.obs.iloc[i]["n_genes"]), "total_counts": float(adata.obs.iloc[i]["total_counts"]), "pct_mito": float(adata.obs.iloc[i]["pct_mito"])} for i in idx],
+        "cells": [str(adata.obs_names[i]) for i in idx],
+    }
+    if gene:
+        values = _expression_vector(gene)
+        result["expression"] = [{"cell": str(adata.obs_names[i]), "value": float(values[i])} for i in idx]
+    if "rank_genes_groups" not in adata.uns:
+        sc.tl.rank_genes_groups(adata, "leiden", method="wilcoxon")
+    ranked = adata.uns["rank_genes_groups"]["names"][cluster][:20]
+    result["top_markers"] = [str(g) for g in ranked]
+    return result
