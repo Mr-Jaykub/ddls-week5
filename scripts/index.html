@@ -36,7 +36,7 @@
       </aside>
       <section class="min-w-0 rounded-xl bg-white p-2 shadow-sm sm:p-4">
         <div id="legend" class="mb-2 text-sm text-slate-600"></div>
-        <div id="plot" class="h-[60vh] min-h-[ twentyrem ]"></div>
+        <div id="plot" class="h-[70vh] min-h-[20rem] w-full"></div>
         <div id="cellPlot" class="mt-4 h-72"></div>
       </section>
     </section>
@@ -59,13 +59,15 @@ async function draw() {
   const points = u.points;
   const numeric = u.numeric;
   document.querySelector('#legend').innerHTML = numeric ? `<span class="font-medium">Legend:</span> colour scale shows ${colour}` : `<span class="font-medium">Legend:</span> each colour represents a cluster; hover over a point for the cluster label`;
-  Plotly.newPlot('plot', [{x: points.map(p=>p.x), y: points.map(p=>p.y), text: points.map(p=>p.cell), customdata: points.map(p=>[p.cluster, p.value]), mode:'markers', type:'scattergl', marker:{size:6, color:numeric ? points.map(p=>p.value) : points.map(p=>p.cluster), colorscale:'Viridis', showscale:numeric, colorbar:numeric ? {title: colour} : undefined}, hovertemplate:'cell %{text}<br>cluster %{customdata[0]}<br>value %{customdata[1]}<extra></extra>'}], {title:`UMAP (display only) — colour: ${colour}`, margin:{t:40,l:40,r:10,b:40}, xaxis:{title:'UMAP 1'}, yaxis:{title:'UMAP 2'}});
+  Plotly.react('plot', [{x: points.map(p=>p.x), y: points.map(p=>p.y), text: points.map(p=>p.cell), customdata: points.map(p=>[p.cluster, p.value]), mode:'markers', type:'scattergl', marker:{size:6, color:numeric ? points.map(p=>p.value) : points.map(p=>p.cluster), colorscale:'Viridis', showscale:numeric, colorbar:numeric ? {title: colour} : undefined}, hovertemplate:'cell %{text}<br>cluster %{customdata[0]}<br>value %{customdata[1]}<extra></extra>'}], {title:`UMAP (display only) — colour: ${colour}`, autosize:true, margin:{t:40,l:40,r:10,b:40}, xaxis:{title:'UMAP 1'}, yaxis:{title:'UMAP 2'}}, {responsive:true});
   const q = c.quality;
   document.querySelector('#summary').innerHTML = `<b>Cluster ${cluster}</b><br>${q.length} cells<br>Top markers: ${c.top_markers.join(', ')}`;
   document.querySelector('#cells').innerHTML = '<b>Individual cells</b><br>' + q.map((x,i)=>`${i+1}. ${x.cell}: genes ${x.n_genes}, counts ${x.total_counts}, mito ${x.pct_mito.toFixed(2)}%`).join('<br>');
   if (gene && c.expression) Plotly.newPlot('cellPlot', [{x:c.expression.map(x=>x.cell), y:c.expression.map(x=>x.value), type:'bar'}], {title:`${gene} expression in cluster ${cluster}`, margin:{t:40,l:45,r:10,b:100}, xaxis:{tickangle:-60}});
   else Plotly.purge('cellPlot');
+  Plotly.Plots.resize('plot');
 }
+window.addEventListener('resize', () => Plotly.Plots.resize('plot'));
 colourMode.addEventListener('change', () => { document.querySelector('#geneControl').classList.toggle('hidden', colourMode.value !== 'gene'); draw().catch(e => document.querySelector('#summary').textContent = e.message); });
 document.querySelector('#refresh').addEventListener('click', () => draw().catch(e => document.querySelector('#summary').textContent = e.message)); clusterEl.addEventListener('change', () => draw().catch(e => document.querySelector('#summary').textContent = e.message)); loadMeta().catch(e => document.querySelector('#summary').textContent = e.message);
 </script>
