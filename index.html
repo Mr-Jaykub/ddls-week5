@@ -13,6 +13,7 @@
     <section class="flex flex-col gap-4 lg:grid lg:grid-cols-[20rem_1fr]">
       <section class="order-1 min-w-0 rounded-xl bg-white p-2 shadow-sm sm:p-4 lg:order-2">
         <div id="legend" class="mb-2 text-sm text-slate-600"></div>
+        <div id="clusterKey" class="mb-2 flex flex-wrap gap-2 text-xs"></div>
         <div id="plot" class="h-[55vh] min-h-[20rem] w-full"></div>
         <div id="cellPlot" class="mt-4 h-72"></div>
       </section>
@@ -48,6 +49,7 @@ async function get(url) { const r = await fetch(url); if (!r.ok) throw new Error
 async function loadMeta() {
   const m = await get('/api/meta');
   m.clusters.forEach(c => clusterEl.add(new Option(c, c)));
+  clusterEl.value = '7';
   m.genes.forEach(g => document.querySelector('#genes').append(new Option(g)));
   await draw();
 }
@@ -59,15 +61,25 @@ async function draw() {
   const points = u.points;
   const numeric = u.numeric;
   const selectedPoints = points.map(p => p.cluster === cluster);
-  document.querySelector('#legend').innerHTML = numeric ? `<span class="font-medium">Legend:</span> colour scale shows ${colour}; selected cluster ${cluster} is outlined` : `<span class="font-medium">Legend:</span> selected cluster ${cluster} is highlighted; other clusters are muted`;
+  document.querySelector('#legend').innerHTML = numeric ? `<span class="font-medium">Legend:</span> colour scale shows ${colour}; selected cluster ${cluster} is outlined` : `<span class="font-medium">Legend:</span> selected cluster ${cluster} is highlighted`;
   const palette = ['#2563eb','#dc2626','#16a34a','#9333ea','#ea580c','#0891b2','#db2777','#ca8a04'];
   const clusterColours = Object.fromEntries([...new Set(points.map(p => p.cluster))].map((cl, i) => [cl, palette[i % palette.length]]));
+  document.querySelector('#clusterKey').innerHTML = Object.entries(clusterColours).map(([cl, colourValue]) => `<span class="inline-flex items-center gap-1"><span class="inline-block h-3 w-3 rounded-full" style="background:${colourValue}"></span>Cluster ${cl}</span>`).join('');
   const markerColours = numeric ? points.map(p=>p.value) : points.map(p=>clusterColours[p.cluster]);
   Plotly.react('plot', [{x: points.map(p=>p.x), y: points.map(p=>p.y), text: points.map(p=>p.cell), customdata: points.map(p=>[p.cluster, p.value]), mode:'markers', type:'scattergl', marker:{size:points.map((p,i)=>selectedPoints[i] ? 10 : 6), color:markerColours, colorscale:numeric ? 'Viridis' : undefined, showscale:numeric, colorbar:numeric ? {title: colour} : undefined, opacity:points.map((p,i)=>selectedPoints[i] ? 1 : 0.65), line:{color:points.map((p,i)=>selectedPoints[i] ? '#111827' : clusterColours[p.cluster]), width:points.map((p,i)=>selectedPoints[i] ? 2 : 1)}}, hovertemplate:'cell %{text}<br>cluster %{customdata[0]}<br>value %{customdata[1]}<extra></extra>'}], {title:`UMAP (display only) — colour: ${colour}`, autosize:true, margin:{t:40,l:40,r:10,b:40}, xaxis:{title:'UMAP 1'}, yaxis:{title:'UMAP 2'}}, {responsive:true});
   const q = c.quality;
   document.querySelector('#summary').innerHTML = `<b>Cluster ${cluster}</b><br>${q.length} cells<br><span class="font-medium">Top markers</span><div class="mt-1 overflow-x-auto"><table class="w-full text-left text-xs"><thead><tr><th>Gene</th><th>Score</th><th>logFC</th><th>Adj. p</th><th>Detected</th><th>Median</th></tr></thead><tbody>${c.top_markers.map(m => `<tr><td class="pr-2 font-medium">${m.gene}</td><td>${m.score == null ? '—' : m.score.toFixed(2)}</td><td>${m.logfoldchange == null ? '—' : m.logfoldchange.toFixed(2)}</td><td>${m.pvals_adj == null ? '—' : m.pvals_adj.toExponential(2)}</td><td>${m.cluster_detection_pct.toFixed(0)}% / ${m.rest_detection_pct.toFixed(0)}%</td><td>${m.cluster_median.toFixed(2)} / ${m.rest_median.toFixed(2)}</td></tr>`).join('')}</tbody></table><p class="mt-1 text-slate-500">Detected and median values are cluster / rest.</p></div>`;
   document.querySelector('#cells').innerHTML = `<details><summary class="cursor-pointer font-medium">Individual cells (${q.length})</summary><div class="mt-2 max-h-48 overflow-auto">${q.map((x,i)=>`${i+1}. ${x.cell}: genes ${x.n_genes}, counts ${x.total_counts}, mito ${x.pct_mito.toFixed(2)}%`).join('<br>')}</div></details>`;
-  if (gene && c.expression) Plotly.newPlot('cellPlot', [{x:c.expression.map(x=>x.cell), y:c.expression.map(x=>x.value), type:'bar'}], {title:`${gene} expression in cluster ${cluster}`, margin:{t:40,l:45,r:10,b:100}, xaxis:{tickangle:-60}});
+  if (gene && c.expression) {
+    const byCell = Object.fromEntries(c.quality.map(x => [x.cell, x]));
+    const cells = c.expression.map(x => x.cell);
+    Plotly.react('cellPlot', [
+      {x:cells, y:c.expression.map(x=>x.value), name:`${gene} expression`, type:'bar', yaxis:'y'},
+      {x:cells, y:cells.map(cell => byCell[cell].n_genes), name:'Genes detected', type:'scatter', mode:'lines+markers', yaxis:'y2'},
+      {x:cells, y:cells.map(cell => byCell[cell].total_counts), name:'Total counts', type:'scatter', mode:'lines+markers', yaxis:'y2'},
+      {x:cells, y:cells.map(cell => byCell[cell].pct_mito), name:'Mitochondrial %', type:'scatter', mode:'lines+markers', yaxis:'y2'}
+    ], {title:`${gene} expression and quality in cluster ${cluster}`, margin:{t:40,l:45,r:55,b:100}, xaxis:{tickangle:-60}, yaxis:{title:'Expression'}, yaxis2:{title:'Quality measures', overlaying:'y', side:'right'}, legend:{orientation:'h', y:-0.35}});
+  }
   else Plotly.purge('cellPlot');
   if (document.querySelector('#plot').data) Plotly.Plots.resize('plot');
 }
