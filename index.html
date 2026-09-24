@@ -74,11 +74,11 @@ async function draw() {
     const byCell = Object.fromEntries(c.quality.map(x => [x.cell, x]));
     const cells = c.expression.map(x => x.cell);
     Plotly.react('cellPlot', [
-      {x:cells, y:c.expression.map(x=>x.value), name:`${gene} expression`, type:'bar', yaxis:'y'},
-      {x:cells, y:cells.map(cell => byCell[cell].n_genes), name:'Genes detected', type:'scatter', mode:'lines+markers', yaxis:'y2'},
-      {x:cells, y:cells.map(cell => byCell[cell].total_counts), name:'Total counts', type:'scatter', mode:'lines+markers', yaxis:'y2'},
-      {x:cells, y:cells.map(cell => byCell[cell].pct_mito), name:'Mitochondrial %', type:'scatter', mode:'lines+markers', yaxis:'y2'}
-    ], {title:`${gene} expression and quality in cluster ${cluster}`, margin:{t:40,l:45,r:55,b:100}, xaxis:{tickangle:-60}, yaxis:{title:'Expression'}, yaxis2:{title:'Quality measures', overlaying:'y', side:'right'}, legend:{orientation:'h', y:-0.35}});
+      {x:cells, y:c.expression.map(x=>x.value), name:`${gene} expression`, type:'bar', xaxis:'x', yaxis:'y'},
+      {x:cells, y:cells.map(cell => byCell[cell].n_genes), name:'Genes detected', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x2', yaxis:'y2'},
+      {x:cells, y:cells.map(cell => byCell[cell].total_counts), name:'Total counts', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x3', yaxis:'y3'},
+      {x:cells, y:cells.map(cell => byCell[cell].pct_mito), name:'Mitochondrial %', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x4', yaxis:'y4'}
+    ], {title:`${gene} expression and quality in cluster ${cluster}`, margin:{t:40,l:55,r:20,b:55}, grid:{rows:4, columns:1, pattern:'independent'}, xaxis:{showticklabels:false}, xaxis2:{showticklabels:false}, xaxis3:{showticklabels:false}, xaxis4:{tickangle:-60}, yaxis:{title:'Expression'}, yaxis2:{title:'Genes'}, yaxis3:{title:'Counts'}, yaxis4:{title:'Mito %'}, showlegend:true, legend:{orientation:'h', y:-0.22}});
   }
   else Plotly.purge('cellPlot');
   if (document.querySelector('#plot').data) Plotly.Plots.resize('plot');
