@@ -104,7 +104,7 @@ def cluster(cluster: str, gene: str | None = None):
             "rest_detection_pct": float((in_rest > 0).mean() * 100),
             "cluster_median": float(np.median(in_cluster)),
             "rest_median": float(np.median(in_rest)),
-            "pvals_adj": float(pvals_adj[gene][i]) if pvals_adj is not None else None,
+            "pvals_adj": float(pvals_adj[cluster][i]) if pvals_adj is not None else None,
         })
     result["top_markers"] = marker_rows
     return result
