@@ -84,5 +84,26 @@ def cluster(cluster: str, gene: str | None = None):
     if "rank_genes_groups" not in adata.uns:
         sc.tl.rank_genes_groups(adata, "leiden", method="wilcoxon")
     ranked = adata.uns["rank_genes_groups"]["names"][cluster][:20]
-    result["top_markers"] = [str(g) for g in ranked]
+    scores = adata.uns["rank_genes_groups"].get("scores")
+    logfoldchanges = adata.uns["rank_genes_groups"].get("logfoldchanges")
+    pvals_adj = adata.uns["rank_genes_groups"].get("pvals_adj")
+    marker_rows = []
+    cluster_values = adata[:, mask].X
+    rest_values = adata[:, ~mask].X
+    for i, gene in enumerate(ranked):
+        gene = str(gene)
+        gene_idx = int(np.flatnonzero(adata.var_names.to_numpy() == gene)[0])
+        in_cluster = np.asarray(cluster_values[:, gene_idx].toarray() if hasattr(cluster_values[:, gene_idx], "toarray") else cluster_values[:, gene_idx]).ravel()
+        in_rest = np.asarray(rest_values[:, gene_idx].toarray() if hasattr(rest_values[:, gene_idx], "toarray") else rest_values[:, gene_idx]).ravel()
+        marker_rows.append({
+            "gene": gene,
+            "score": float(scores[gene][i]) if scores is not None else None,
+            "logfoldchange": float(logfoldchanges[gene][i]) if logfoldchanges is not None else None,
+            "pvals_adj": float(pvals_adj[gene][i]) if pvals_adj is not None else None,
+            "cluster_detection_pct": float((in_cluster > 0).mean() * 100),
+            "rest_detection_pct": float((in_rest > 0).mean() * 100),
+            "cluster_median": float(np.median(in_cluster)),
+            "rest_median": float(np.median(in_rest)),
+        })
+    result["top_markers"] = marker_rows
     return result
