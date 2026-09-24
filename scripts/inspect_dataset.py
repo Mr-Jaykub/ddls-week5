@@ -25,12 +25,21 @@ def main() -> None:
         where=total_counts != 0,
     ) * 100
 
-    qc = pd.DataFrame(
+    qc_from_counts = pd.DataFrame(
         {
             "cluster": adata.obs["leiden"].astype(str).to_numpy(),
             "n_genes": n_genes,
             "total_counts": total_counts,
             "pct_mito": pct_mito,
+        },
+        index=adata.obs_names,
+    )
+    qc = pd.DataFrame(
+        {
+            "cluster": adata.obs["leiden"].astype(str).to_numpy(),
+            "n_genes": adata.obs["n_genes"].to_numpy(),
+            "total_counts": adata.obs["total_counts"].to_numpy(),
+            "pct_mito": adata.obs["pct_mito"].to_numpy(),
         },
         index=adata.obs_names,
     )
@@ -56,18 +65,16 @@ def main() -> None:
     statistic_check = []
     for label, (cluster, metric, owner_value) in owner_values.items():
         values = qc.loc[qc["cluster"] == cluster, metric] if metric != "n_cells" else pd.Series([len(qc[qc["cluster"] == cluster])])
+        rounded_median = round(float(values.median()), 1 if metric == "pct_mito" else 0)
         statistic_check.append(
             {
                 "owner_item": label,
                 "owner_value": owner_value,
-                "mean": float(values.mean()),
-                "median": float(values.median()),
-                "min": float(values.min()),
-                "max": float(values.max()),
-                "matches_mean": bool(np.isclose(values.mean(), owner_value)),
-                "matches_median": bool(np.isclose(values.median(), owner_value)),
-                "matches_min": bool(np.isclose(values.min(), owner_value)),
-                "matches_max": bool(np.isclose(values.max(), owner_value)),
+                "stored_mean": float(values.mean()),
+                "stored_median": float(values.median()),
+                "rounded_median": rounded_median,
+                "count": int(len(values)),
+                "matches_rounded_median": bool(np.isclose(rounded_median, owner_value)),
             }
         )
     statistic_check = pd.DataFrame(statistic_check).set_index("owner_item")
@@ -106,12 +113,29 @@ def main() -> None:
         "No additional embeddings or named cell-type annotations were found.",
         "The existing X_umap coordinates are reusable for display only, not evidence.",
         "", 
-        "Recomputed per-cluster QC (from layers['counts']); means and medians",
+        "Per-cluster QC from the file's stored obs columns; means and medians",
         summary.to_string(),
         "",
+        "Counts-derived versus stored-column QC check",
+        "The stored obs columns are the primary QC values because they are the dataset's own processed annotations. Counts-derived values are retained as a consistency check.",
+        "n_genes exact agreement: " + str(bool(np.array_equal(qc["n_genes"].to_numpy(), n_genes))),
+        "total_counts exact agreement: " + str(bool(np.array_equal(qc["total_counts"].to_numpy(), total_counts))),
+        "pct_mito max absolute difference: " + str(float(np.max(np.abs(qc["pct_mito"].to_numpy() - pct_mito)))),
+        "",
         "Owner-number statistic check",
-        "An owner value is not called a mismatch if it matches a mean, median, minimum, or maximum within numerical tolerance.",
+        "Rounded medians are considered compatible; exact equality is not required for rounded owner summaries.",
         statistic_check.to_string(),
+        "",
+        "Per-cluster QC recomputed directly from layers['counts'] (consistency view)",
+        qc_from_counts.groupby("cluster").agg(
+            n_cells=("cluster", "size"),
+            n_genes_mean=("n_genes", "mean"),
+            n_genes_median=("n_genes", "median"),
+            total_counts_mean=("total_counts", "mean"),
+            total_counts_median=("total_counts", "median"),
+            pct_mito_mean=("pct_mito", "mean"),
+            pct_mito_median=("pct_mito", "median"),
+        ).to_string(),
         "",
         "Cluster 7 per-cell QC",
         qc[qc["cluster"] == "7"].to_string(),

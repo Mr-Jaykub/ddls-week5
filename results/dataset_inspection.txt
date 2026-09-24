@@ -28,7 +28,37 @@ X_umap: type=ndarray, shape=(2700, 2)
 No additional embeddings or named cell-type annotations were found.
 The existing X_umap coordinates are reusable for display only, not evidence.
 
-Recomputed per-cluster QC (from layers['counts']); means and medians
+Per-cluster QC from the file's stored obs columns; means and medians
+         n_cells  n_genes_mean  n_genes_median  total_counts_mean  total_counts_median  pct_mito_mean  pct_mito_median
+cluster                                                                                                               
+0           1197    807.276525           809.0        2336.450195               2312.0       1.962590         1.754386
+1            489    858.525562           850.0        2381.259766               2305.0       2.449431         2.251576
+2            445    830.456180           828.0        1960.963989               1956.0       2.506596         2.259165
+3            347    712.746398           673.0        1919.074951               1759.0       2.257390         2.076356
+4            163   1216.269939          1263.0        3666.950928               3782.0       2.551198         2.407516
+5             36   1505.444444          1570.0        5074.583496               5297.0       1.960111         1.955291
+6             13    576.153846           350.0        1659.846191                917.0       1.925888         1.567574
+7             10   2394.100000          2363.5        8894.000000               8507.5       2.366975         2.034771
+
+Counts-derived versus stored-column QC check
+The stored obs columns are the primary QC values because they are the dataset's own processed annotations. Counts-derived values are retained as a consistency check.
+n_genes exact agreement: False
+total_counts exact agreement: False
+pct_mito max absolute difference: 0.1013520359992981
+
+Owner-number statistic check
+Rounded medians are considered compatible; exact equality is not required for rounded owner summaries.
+                    owner_value  stored_mean  stored_median  rounded_median  count  matches_rounded_median
+owner_item                                                                                                
+cluster 7 n_genes        2363.0  2394.100000    2363.500000          2364.0     10                   False
+cluster 7 pct_mito          2.0     2.366975       2.034771             2.0     10                    True
+cluster 6 n_genes         350.0   576.153846     350.000000           350.0     13                    True
+cluster 6 pct_mito          1.6     1.925888       1.567574             1.6     13                    True
+cluster 4 n_genes        1263.0  1216.269939    1263.000000          1263.0    163                    True
+cluster 4 pct_mito          2.4     2.551198       2.407516             2.4    163                    True
+cluster 0 n_cells        1197.0  1197.000000    1197.000000          1197.0      1                    True
+
+Per-cluster QC recomputed directly from layers['counts'] (consistency view)
          n_cells  n_genes_mean  n_genes_median  total_counts_mean  total_counts_median  pct_mito_mean  pct_mito_median
 cluster                                                                                                               
 0           1197    805.980785           808.0        2335.096191               2310.0       1.963773         1.755086
@@ -40,45 +70,33 @@ cluster
 6             13    568.692308           345.0        1651.076904                916.0       1.934865         1.577465
 7             10   2384.100000          2354.0        8882.900391               8498.5       2.369612         2.038474
 
-Owner-number statistic check
-An owner value is not called a mismatch if it matches a mean, median, minimum, or maximum within numerical tolerance.
-                    owner_value         mean       median          min          max  matches_mean  matches_median  matches_min  matches_max
-owner_item                                                                                                                                 
-cluster 7 n_genes        2363.0  2384.100000  2354.000000  1589.000000  3400.000000         False           False        False        False
-cluster 7 pct_mito          2.0     2.369612     2.038474     1.120214     4.097788         False           False        False        False
-cluster 6 n_genes         350.0   568.692308   345.000000   212.000000  2413.000000         False           False        False        False
-cluster 6 pct_mito          1.6     1.934865     1.577465     0.679348     3.225806         False           False        False        False
-cluster 4 n_genes        1263.0  1214.521472  1262.000000   389.000000  1934.000000         False           False        False        False
-cluster 4 pct_mito          2.4     2.552371     2.410099     0.126422    22.569028         False           False        False        False
-cluster 0 n_cells        1197.0  1197.000000  1197.000000  1197.000000  1197.000000          True            True         True         True
-
 Cluster 7 per-cell QC
                  cluster  n_genes  total_counts  pct_mito
 index                                                    
-ACGTCGCTCCTGAA-1       7     1589        3924.0  1.860347
-ACTTCAACAAGCAA-1       7     1777        5416.0  3.083456
-AGAGGTCTACAGCT-1       7     2798       10762.0  2.620331
-CACCGGGACTTCTA-1       7     1610        4295.0  4.097788
-CCAGTCTGCGGAGA-1       7     3400       15818.0  1.795423
-CGATACGACAGGAG-1       7     2023        6722.0  2.216602
-GCCTCAACTCTTTG-1       7     1954        5981.0  1.120214
-GCGAAGGAGAGCTT-1       7     2703       10275.0  3.377129
-GGCACGTGTGAGAA-1       7     2685       10349.0  1.758624
-TTACTCGAACGTTG-1       7     3302       15287.0  1.766207
+ACGTCGCTCCTGAA-1       7     1597        3932.0  1.856562
+ACTTCAACAAGCAA-1       7     1780        5419.0  3.081749
+AGAGGTCTACAGCT-1       7     2815       10783.0  2.615228
+CACCGGGACTTCTA-1       7     1612        4297.0  4.095881
+CCAGTCTGCGGAGA-1       7     3422       15844.0  1.792477
+CGATACGACAGGAG-1       7     2033        6733.0  2.212981
+GCCTCAACTCTTTG-1       7     1963        5990.0  1.118531
+GCGAAGGAGAGCTT-1       7     2710       10282.0  3.374830
+GGCACGTGTGAGAA-1       7     2694       10359.0  1.756926
+TTACTCGAACGTTG-1       7     3315       15301.0  1.764591
 
 Cluster 6 per-cell QC
                  cluster  n_genes  total_counts  pct_mito
 index                                                    
-ACCCACTGGTTCAG-1       6      338         556.0  1.258993
-ACGAACTGGCTATG-1       6     2413        8875.0  1.577465
-AGTCTTACTTCGGA-1       6      273         663.0  0.754148
-ATCATCTGACACCA-1       6      366         736.0  0.679348
-ATTCAGCTCATTGG-1       6      345         916.0  2.947598
-GACGCTCTCTCTCG-1       6      266         682.0  3.225806
-GAGTTGTGGTAGCT-1       6      849        2405.0  0.914761
-GCGCATCTGGTTAC-1       6      979        2513.0  2.865101
-GGAACACTTCAGAC-1       6      278         623.0  2.889246
+ACCCACTGGTTCAG-1       6      350         568.0  1.232394
+ACGAACTGGCTATG-1       6     2455        8931.0  1.567574
+AGTCTTACTTCGGA-1       6      274         664.0  0.753012
+ATCATCTGACACCA-1       6      367         737.0  0.678426
+ATTCAGCTCATTGG-1       6      346         917.0  2.944384
+GACGCTCTCTCTCG-1       6      267         683.0  3.221083
+GAGTTGTGGTAGCT-1       6      865        2422.0  0.908340
+GCGCATCTGGTTAC-1       6      984        2518.0  2.859412
+GGAACACTTCAGAC-1       6      283         628.0  2.866242
 GGCATATGGGGAGT-1       6      212         575.0  1.217391
-GTCATACTTCGCCT-1       6      359         979.0  2.962206
-TAACACCTTGTTTC-1       6      394         999.0  1.101101
-TTACGTACGTTCAG-1       6      321         942.0  2.760085
+GTCATACTTCGCCT-1       6      364         984.0  2.947155
+TAACACCTTGTTTC-1       6      397        1004.0  1.095618
+TTACGTACGTTCAG-1       6      326         947.0  2.745512
