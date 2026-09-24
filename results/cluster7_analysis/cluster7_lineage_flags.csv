@@ -1,0 +1,11 @@
+cell,cluster,T_cell_positive,B_cell_positive,myeloid_positive,NK_cell_positive,platelet_positive,cluster7,cluster7_lineage_count,cluster7_double_lineage
+ACGTCGCTCCTGAA-1,7,False,True,True,True,False,True,3,True
+ACTTCAACAAGCAA-1,7,False,True,False,True,False,True,2,True
+AGAGGTCTACAGCT-1,7,True,True,False,True,False,True,3,True
+CACCGGGACTTCTA-1,7,True,True,True,True,False,True,4,True
+CCAGTCTGCGGAGA-1,7,True,True,True,True,False,True,4,True
+CGATACGACAGGAG-1,7,True,True,False,True,False,True,3,True
+GCCTCAACTCTTTG-1,7,True,True,True,True,False,True,4,True
+GCGAAGGAGAGCTT-1,7,True,True,True,True,False,True,4,True
+GGCACGTGTGAGAA-1,7,False,True,True,False,False,True,2,True
+TTACTCGAACGTTG-1,7,True,True,True,True,False,True,4,True
