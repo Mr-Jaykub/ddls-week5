@@ -1,103 +1,75 @@
-# Specification: Cluster 7 follow-up decision
+# Specification: cluster 7 follow-up decision
 
 ## Objective
 
-Analyze the supplied processed human PBMC single-cell RNA-seq dataset and produce a defensible recommendation for Alex Rios and the PI: **sequence cluster 7 in an independent follow-up run, or set it aside**. The work should determine whether cluster 7 is a coherent, biologically meaningful signal rather than a technical or sampling artefact. It must not present cluster 7 as proven novel.
+Produce a defensible **SEQUENCE** or **SET ASIDE** recommendation for cluster 7. The memo must name a supported cell type and its marker genes, or explicitly say **“no coherent identity”**; it must never claim novelty. A coherent identity with only a small effect is **SET ASIDE**, not SEQUENCE.
 
-## Dataset contract
+## Data and build contract
 
-Use `data/pbmc3k.h5ad`, loaded once at startup with `sc.read_h5ad`, using `.venv/bin/python`. At startup, print `adata` and recompute per-cluster QC before using any owner-supplied number. Do not create another environment. Use the existing `pbmc3k.h5ad` file only through its documented contents:
+Use `data/pbmc3k.h5ad`, loaded with `sc.read_h5ad` via `.venv/bin/python`. Analysis scripts and the later app may load the file as needed; do not reload it inside an endpoint request. Print `adata` and recompute per-cluster QC before using any owner-supplied number; record verified values in `results/`. Never create an environment, overwrite `obs["leiden"]`, or recompute the supplied labels/UMAP.
 
-- 2,700 human PBMC cells in clusters `0`–`7`.
-- Rows conceptually represent cells and columns genes.
-- `ad.X`: log-normalised expression for 13,714 genes.
-- `ad.layers["counts"]`: raw UMI counts.
-- `ad.var_names`: gene symbols.
-- `ad.obs["leiden"]`: numeric cluster labels (`"0"` through `"7"`).
-- `ad.obs["n_genes"]`, `ad.obs["total_counts"]`, `ad.obs["pct_mito"]`: per-cell QC.
-- `ad.obsm["X_umap"]`: existing two-dimensional coordinates.
-- Do not recompute the existing clusters or map.
+The file contains expression in `ad.X`, raw UMI counts in `ad.layers["counts"]`, gene names in `ad.var_names`, cluster labels in `ad.obs["leiden"]`, QC columns in `ad.obs`, and the existing display coordinates in `ad.obsm["X_umap"]`. Full meanings are documented in `data/ABOUT_THIS_FILE.txt`.
 
-The summary does not provide donor, batch, treatment, collection-time, provenance, filtering, preprocessing, duplicate, or biological-replicate information. These are limitations, not facts to infer.
+The owner’s summary is not evidence until checked against the file. Preserve these owner-reported values as **[UNVERIFIED]** until recomputed: cluster 7 reportedly has 10 cells, 2,363 genes per cell, and 2.0% mitochondrial RNA; cluster 6 reportedly has 13 cells, 350 genes per cell, and 1.6% mitochondrial RNA; cluster 4 reportedly has 163 cells, 1,263 genes per cell, and 2.4% mitochondrial RNA; and cluster 0 reportedly has 1,197 cells. Report any mismatch explicitly. The owner selected cluster 4 as the named comparator, but it must still be compared with all clusters under the same rules. Unknowns include donor, batch, treatment, collection time, provenance, filtering, preprocessing, duplicate status, sampling history, and biological replication. The dataset may also contain ambient RNA, doublets, duplicated records, quality-driven separation, and cluster boundaries dependent on analysis settings. “One donor, no replicates” means observations are not independent biological replicates: cell-level p-values cannot establish population-level reproducibility, and uncertainty/generalisation must be stated conservatively.
 
-## Primary scientific questions
+Use the documented Scanpy/H5AD stack only. `README.md` is the final one-page memo. Put scripts in `scripts/`; put every table, verified number, statistical result, and figure in `results/`. The two required figures must be committed image files in `results/`. An app will be built later under separate app instructions; this specification defines the analysis and memo, not the app implementation.
 
-1. Is cluster 7’s expression program coherent across its 10 cells?
-2. Is it distinct from clusters 0–6, particularly its nearest UMAP neighbours and QC-matched cells?
-3. Are differences explained by `n_genes`, `total_counts`, or `pct_mito` rather than biology?
-4. Does cluster 7 resemble a known PBMC population, or is no reliable identity supported?
-5. Is there evidence strong enough to justify one follow-up sequencing run?
+## Questions and comparisons
 
-Cluster 4 is an optional comparator: it has 163 cells, 1,263 genes/cell, and 2.4% mitochondrial RNA. The original cluster-4 novelty question is secondary to the cluster-7 decision.
+1. Is cluster 7 coherent across its cells?
+2. Is it distinct from **all seven** other clusters, with cluster 4 as the owner’s named comparator and without selecting or excluding comparisons by UMAP distance?
+3. Are differences explained by `n_genes`, `total_counts`, `pct_mito`, capture, duplicates, ambient RNA, or doublets?
+4. Does it match a known PBMC type, or is there no coherent identity?
+5. Is it worth the one follow-up run?
 
-## Analysis stack and build contract
+## Pre-specified analysis
 
-Use the existing Python virtual environment and the documented Scanpy/H5AD workflow; do not substitute another analysis stack. Load the dataset once at startup, print `adata`, recompute per-cluster QC, and preserve a reproducible record of software/settings, exact cluster-7 cell identifiers, exclusions and reasons, and analysis choices. Put scripts only in `scripts/` and generated outputs only in `results/`.
+### Markers and multiplicity
 
-## Analysis requirements
+Rank genes for all clusters, then use Scanpy `sc.tl.rank_genes_groups` as the single marker-ranking method for both the offline analysis and the app’s live marker table, with one pre-specified cluster-7-versus-rest analysis and identical settings. Use the documented rank-test method and library-size handling supported by the stack; do not fit a fragile negative-binomial model to ten cells. Correct that one gene-testing family with Benjamini–Hochberg FDR. Compare cluster 7 with each other cluster descriptively and with pre-specified effect/QC checks; do not create uncontrolled independent test families for every pair or plot.
 
-### Expression and differential comparisons
+For every reported marker, provide gene, comparison, detection prevalence in both groups, median expression, log2 fold-change, raw and BH-adjusted p-value, and a bootstrap uncertainty interval where supported; also report the number of genes tested and correction family. The app and analysis must use the same `rank_genes_groups` outputs/settings so a displayed marker means the same thing in both places, avoiding contradictory results, duplicated logic, and irreproducible review. Treat absolute log2FC below 0.25 as small, about 0.5 as moderate, and about 1 as sizeable. Adjusted p < 0.05 is screening evidence only; a stronger exploratory marker has about log2FC 1 and a 25–30 percentage-point prevalence difference.
 
-- Rank top genes for every cluster to describe expression programs.
-- Compare cluster 7 with every other cluster, prioritizing UMAP-nearest groups.
-- Use normalisation/library-size adjustment appropriate to the expression data and a method that handles unequal cluster sizes.
-- Report marker detection prevalence, median expression, log2 fold-change, uncertainty/confidence intervals where possible, and multiple-testing-adjusted results.
-- Treat absolute log2FC < 0.25 as small, approximately 0.5 as moderate, and approximately 1.0 as sizeable.
-- Use adjusted p < 0.05 only as an exploratory screening criterion, not proof. For a stronger exploratory signal, look for approximately log2FC 1 and a 25–30 percentage-point detection-prevalence difference.
-- Compare against QC-matched cells or otherwise assess whether library size and quality explain apparent separation.
-- Include a whole-dataset baseline across all 2,700 cells and, where possible, a well-annotated same-species/comparable-assay PBMC reference. Reference matching is a naming aid, not proof of identity.
-- If using a null comparison, pre-specify it (for example, label shuffling or matched-cell comparisons).
+### Coherence and identity
 
-### Coherence and robustness
+Define “expressed” before inspecting results as at least one raw UMI in `ad.layers["counts"]`. Report the raw-count distribution and marker prevalence to check that this threshold is supported rather than driven by transformed noise. Leading markers must be expressed in at least 8/10 cluster-7 cells, with no single cell driving the program.
 
-- Evaluate individual cells rather than cluster averages alone.
-- As a working criterion, leading markers should be present above a defined threshold in at least 8 of 10 cluster-7 cells, with no one cell driving the result. Report the actual threshold and results.
-- Perform leave-one-cell-out analysis. If removal of one or two cells eliminates the signal, classify it as unstable.
-- Inspect all cluster-7 cells for mixed profiles, doublet-like behaviour, unusually high RNA, and extreme QC.
-- Check exact barcodes/records and repeated expression profiles for duplicates if the source data permit it. Investigate before removal; document any removal and rerun clustering if records are removed. Do not automatically remove merely similar cells.
-- Conduct reasonable sensitivity checks for filtering, dimensions, and clustering settings where supported by the available data.
+Perform leave-one-cell-out and every relevant leave-two-cell-out check. The result **survives** if the same named identity and leading marker program remain supported in at least 80% of retained cells, leading effects do not reverse, and the decision is unchanged for every removal. If one or two removals eliminate the signal, call it unstable and SET ASIDE.
 
-### Quality assessment
+Identity controls are written before results: (a) use cluster 1 as the known-type control, draw 100 bootstrap resamples of its cells with replacement, and require the expected canonical PBMC type and marker program in at least 95/100 draws with no contradictory lineage; (b) use 100 random groups of 10 cells sampled from the full dataset as the negative control, and require “no coherent identity” in at least 95/100 draws. Failure of either control invalidates the pipeline and prevents naming cluster 7.
 
-Compare cluster 7 with every relevant cluster and the full dataset for:
+### Required traps and technical checks
 
-- cell count;
-- `n_genes`;
-- `total_counts`;
-- `pct_mito`;
-- distributions and individual-cell extremes, not merely means.
+- **Doublet:** define incompatible lineage marker sets in advance. A lineage is positive when at least two of its markers have ≥1 raw UMI in `ad.layers["counts"]`; flag cells positive for both lineages, especially with extreme `total_counts` or `n_genes`. Raw counts are required because co-expression is a molecule-detection question; `ad.X` is log-normalised. Report sets, thresholds, flagged cells, and interpretation. A standard doublet score is secondary only.
+- **Cluster 6’s low gene count and mitochondrial context:** the owner reported **[UNVERIFIED]** 350 genes per cell and 1.6% mitochondrial RNA for cluster 6. Low detected-gene counts make its expression estimates fragile even when mitochondrial percentage is low; recompute both, show every cell, and keep cluster 6 exploratory. A few cells can dominate its estimates, so it cannot provide stable population evidence.
+- **Separated does not mean novel:** UMAP is display only. Require markers, per-cell coherence, all-cluster comparison, QC/doublet checks, effect sizes, and robustness. Name a known type or say “no coherent identity”; never claim novelty.
+- Check exact barcodes and repeated profiles for duplicates; investigate before removal, document exclusions, and rerun only the sensitivity analysis if records are removed. Do not delete merely similar cells.
 
-Cluster 7’s known summary values are 10 cells, 2,363 genes/cell, and 2.0% mitochondrial RNA. Treat its high gene count as potentially biological, high capture, or doublet-related until checked. Clusters 6 (13 cells; 350 genes/cell; 1.6% mitochondrial RNA) and 7 are especially uncertain; cluster 5 is also exploratory. Cluster 0 has 1,197 cells, illustrating the uneven sizes.
+### Nulls and distrust
 
-## Decision rule
+Rank and pre-specify nulls: (1) an existing Scanpy doublet detector, `sc.pp.scrublet`, run on the raw-count layer as required by its API, with its simulated-doublet score and flagged cells; (2) a QC-matched non-cluster-7 comparison matched on `total_counts`, `n_genes`, and `pct_mito`; (3) a label-shuffle sensitivity check preserving the observed cluster sizes. `scrublet` is the doublet-mixture null: it simulates artificial doublets from the observed count profiles and compares them with observed cells, so do not invent a second bespoke synthetic-mixture null unless the function is unavailable. The QC-matched comparison tests quality explanation. Label shuffling is not a valid novelty null here because the observed clusters were produced from expression-derived structure: shuffling labels destroys the clustering relationship and asks only whether arbitrary labels produce a signal, not whether the existing cluster-7 assignment is biologically coherent. Use it only as a negative pipeline check, never as evidence for or against identity.
 
-Recommend **sequence** only if all of the following are reasonably supported:
+Distrust the result if identity changes after one or two removals, markers occur in a minority, one cell/QC extreme drives it, either primary null explains it, marker directions reverse, intervals include negligible effects, results depend on arbitrary filtering, duplicate/barcode checks fail, ambient RNA or mixed profiles are plausible, controls fail, or missing provenance prevents defensible interpretation.
 
-- a coherent marker program is present across most cluster-7 cells;
-- the distinction from relevant neighbouring/QC-matched clusters is meaningful, not merely statistically significant;
-- quality metrics, high RNA capture, duplicates, doublets, or mixed profiles do not plausibly explain it;
-- the conclusion is not overturned by leave-one-cell-out or reasonable sensitivity checks;
-- the limitations of 10 cells, absent biological replicates, and incomplete provenance are clearly acknowledged.
+## Sensitivity and labels
 
-Otherwise recommend **set aside**. This means the cluster is not sufficiently defensible for the one run, not that it is disproven. If it matches a known cell type, name it only with appropriate evidence; sequence only if it remains unusually coherent or biologically important, not merely because it is known.
+First inspect the file for unique cell identifiers, `obs["leiden"]` integrity, raw-count layer availability, QC columns, duplicate profiles/barcodes, and the existing UMAP. Analysis scripts may load the file directly with `sc.read_h5ad`; the app should load it once at startup, not per request. Run the core analysis first. Prefer a neighbour-purity check using the existing representation and labels: report, for each cluster-7 cell, the fraction of its existing-space neighbours carrying each label. Do not select comparisons by map distance. Only if that check is unavailable or inadequate may a separate-copy re-clustering sensitivity be attempted after the core analysis; never alter the original labels or UMAP. If neither is possible, state it as a limitation.
 
-Select one alternative only if it beats cluster 7 under the same criteria: coherent markers, meaningful separation, adequate cell number, non-explanatory QC, and fewer unresolved technical concerns. Cluster 4 is a plausible candidate, not an automatic alternative. If none qualifies, state “no stronger alternative identified.”
+## Decision and alternative rules
 
-## Done-condition
+**SEQUENCE** requires a coherent marker program across most cells, meaningful effects against all clusters, no persuasive QC/doublet/duplicate explanation, survival under removals, and explicit limitations. If identity is coherent but effects are small, unstable, technically explained, or not sufficiently reproducible, choose **SET ASIDE**. SET ASIDE does not disprove the identity.
 
-The work is done only when the memo contains a defensible sequence-or-set-aside decision for cluster 7, names its supported cell type and marker genes (or explicitly says no coherent identity is supported), compares it with the other clusters and relevant baselines, reports per-cell coherence and QC/technical checks, states uncertainty and missing provenance, and includes the reproducibility record and required figures. It must distinguish “worth testing” from “proven to be a new population.”
+Before seeing results, define “stronger alternative” as a better lead for the one follow-up run, not the largest, cleanest, or best-behaved cluster. Do not invent a numeric weighted score. First require the candidate to pass the same coherence bar as cluster 7: at least 80% of cells express the leading marker program, it remains stable under one- and two-cell removal, and it has no contradictory doublet signal. Then compare candidates using this owner-facing evidence ladder, in order: (1) coherent identity and marker support; (2) meaningful distinction from all clusters, including cluster 7; (3) technical explanations ruled out; (4) robustness and uncertainty; and only then (5) enough cells to make the proposed run informative. A large cluster cannot compensate for failing identity or coherence, and a small but coherent lead is not automatically disqualified. Choose at most one candidate only when it is better supported as a follow-up experiment under this ladder and has a stronger SEQUENCE/SET ASIDE case; otherwise report **“no stronger alternative identified.”**
 
-## Deliverable format
+## Deliverable and done-condition
 
-Produce a one-page budget-meeting memo with:
+`README.md` must contain:
 
-1. **Decision:** bold “SEQUENCE” or “SET ASIDE”.
-2. **Evidence table:** cluster 7 versus clusters 0–6, including cell count, marker effects, adjusted results, `n_genes`, `total_counts`, and `pct_mito`.
-3. **Biological evidence:** top marker programs, nearest-cluster comparisons, known-reference comparison if available, and observed versus interpreted findings clearly separated.
-4. **Consistency/quality:** per-cell marker prevalence, QC distributions, duplicate/doublet checks, and leave-one-cell-out results.
-5. **Uncertainty and limitations:** effect-size uncertainty, small-cell-count caveat, missing metadata/provenance, and lack of replication.
-6. **Alternative:** one stronger alternative with rationale, or the explicit no-alternative statement.
-7. **Figures:** an existing-map figure highlighting cluster 7, plus a per-cell expression/QC figure showing whether the signal is consistent across all 10 cells.
-8. **Reproducibility appendix/record:** software and settings, exact cluster-7 cell identifiers, exclusions and their reasons, and analysis choices.
+1. Bold **SEQUENCE** or **SET ASIDE** and the named identity plus markers, or “no coherent identity”.
+2. A table comparing cluster 7 with clusters 0–6: verified cell count, marker effects/adjusted results, `n_genes`, `total_counts`, and `pct_mito`.
+3. Per-cell marker/QC views, doublet and duplicate checks, leave-one/two-out results, null results, controls, uncertainty, one-donor/no-replicate limitation, and distrust triggers.
+4. At most one stronger alternative justified by the pre-specified evidence ladder, or the no-alternative statement.
+5. Two committed images in `results/`: the UMAP as display only, and a per-cell expression/QC figure.
+6. Reproducibility details: software/settings, exact cluster-7 identifiers, exclusions/reasons, verified-number tables, and analysis choices. Every README number must correspond to a `results/` file.
 
-The conclusion must say whether cluster 7 is **worth testing**, not claim that it is **proven to be a new population**. Do not specify a prospective surface marker or lab-isolation strategy without first establishing a coherent program and confirming usable surface-protein counterparts.
+The work is done only when the memo, tables, figures, controls, sensitivity results, and reproducibility record support the decision without claiming novelty.

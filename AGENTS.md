@@ -13,17 +13,15 @@ Use `data/pbmc3k.h5ad`, loaded once at startup with `sc.read_h5ad`. Key meanings
 - Do not report a cluster average without the corresponding per-cell view.
 - Do not rely on a p-value alone.
 - Do not check co-expression on `ad.X`; use `ad.layers["counts"]`.
-- Do not reload the `.h5ad` inside an endpoint.
+- Do not reload the `.h5ad` inside an endpoint request; load it once at app startup.
 - Do not put a number in the app or README that is not in a `results/` file.
 - Do not commit `.env` or `data/`.
 - Do not overwrite `obs["leiden"]`.
 - Do not claim to have seen the app render.
-- Do not open or inspect the `.h5ad` outside the startup load, or bypass the documented loading approach.
-- Do not omit per-cell consistency, quality measures, uncertainty, limitations, or direct comparisons.
-- Do not ignore unequal cluster sizes, multiple testing, small clusters, duplicates, doublets, mixed profiles, or QC-driven separation.
-- Do not present owner-supplied counts or QC summaries as verified before recomputing them.
-- Do not infer unavailable donor, batch, treatment, collection, provenance, filtering, preprocessing, replication, cost, or follow-up cell-number facts.
-- Do not automatically delete near-identical cells; investigate duplicates and document exclusions.
+- Do not open or inspect the `.h5ad` outside the documented `sc.read_h5ad` loading approach; analysis scripts may load it as needed.
+- Do not report a cluster statistic without its per-cell values, uncertainty, and direct all-cluster comparison.
+- Do not publish an owner-supplied count or QC summary before recomputing and recording it in `results/`.
+- Do not delete near-identical cells without checking barcodes/profiles and documenting the exclusion.
 - Do not recommend a prospective surface marker without a coherent program and verified surface-protein counterpart.
 - Do not deviate from the analysis stack specified in `spec.md`.
 - Do not put scripts anywhere except `scripts/`.
