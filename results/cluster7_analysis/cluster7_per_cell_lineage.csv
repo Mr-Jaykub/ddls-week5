@@ -1,0 +1,11 @@
+cell,cluster,T_cell_positive,T_cell_score,B_cell_positive,B_cell_score,myeloid_positive,myeloid_score,NK_cell_positive,NK_cell_score,platelet_positive,platelet_score,lineage_count,multi_lineage,assigned_lineage,cluster_qc,n_genes,total_counts,pct_mito
+ACGTCGCTCCTGAA-1,7,False,0.0,False,0.42216745,False,0.3166256,True,3.3708484,False,0.0,1,False,NK_cell,7,1597,3932.0,1.8565615
+ACTTCAACAAGCAA-1,7,False,1.3790879,False,0.3486828,False,0.2615121,False,0.8778873,False,0.0,0,False,T_cell,7,1780,5419.0,3.0817494
+AGAGGTCTACAGCT-1,7,True,2.3670487,False,0.6277669,False,0.2625647,True,2.105765,False,0.0,2,True,T_cell,7,2815,10783.0,2.6152277
+CACCGGGACTTCTA-1,7,True,2.6794395,False,0.5776063,True,0.8200016,False,0.77780676,False,0.0,2,True,T_cell,7,1612,4297.0,4.0958805
+CCAGTCTGCGGAGA-1,7,False,0.40865102,True,2.1173666,True,0.56019866,True,0.4357418,False,0.0,3,True,B_cell,7,3422,15844.0,1.7924767
+CGATACGACAGGAG-1,7,True,1.8380905,False,0.3037798,False,0.22783487,False,0.4600338,False,0.0,1,False,T_cell,7,2033,6733.0,2.2129807
+GCCTCAACTCTTTG-1,7,True,1.388608,False,0.32760426,False,0.3671944,False,0.88851285,False,0.0,1,False,T_cell,7,1963,5990.0,1.1185309
+GCGAAGGAGAGCTT-1,7,True,1.2244393,False,0.36020282,True,0.56686723,False,0.82002234,False,0.0,2,True,T_cell,7,2710,10282.0,3.3748298
+GGCACGTGTGAGAA-1,7,False,0.0,True,1.4070253,True,0.8788176,False,0.0,False,0.22538064,2,True,B_cell,7,2694,10359.0,1.7569263
+TTACTCGAACGTTG-1,7,True,0.96126455,True,0.89344066,True,0.25164384,False,0.2788373,False,0.0,3,True,T_cell,7,3315,15301.0,1.7645905

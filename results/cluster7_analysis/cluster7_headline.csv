@@ -1,2 +1,2 @@
-cluster7_cells,owner_screen_markers,cluster7_multi_lineage_pct,all_cluster_multi_lineage_pct_min,all_cluster_multi_lineage_pct_max,cluster7_cycle_positive,scrublet_status,cluster7_scrublet_doublets,cluster7_scrublet_doublet_pct
-10,146,90.0,41.4985590778098,100.0,10,completed,1,10.0
+cluster7_cells,identity_candidates,cluster7_multi_lineage_pct,scrublet_status,cluster7_scrublet_doublets,known_control_pass_rate,negative_control_no_identity_rate
+10,131,60.0,completed,1,0.0,1.0
