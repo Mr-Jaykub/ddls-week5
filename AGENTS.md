@@ -24,7 +24,7 @@ Use `data/pbmc3k.h5ad`, loaded once at startup with `sc.read_h5ad`. Key meanings
 - Do not delete near-identical cells without checking barcodes/profiles and documenting the exclusion.
 - Do not recommend a prospective surface marker without a coherent program and verified surface-protein counterpart.
 - Do not deviate from the analysis stack specified in `spec.md`.
-- Do not put scripts anywhere except `scripts/`.
+- Do not put analysis scripts anywhere except `scripts/`; the app entrypoint must remain at the repository root as `app.py`.
 - Do not put generated outputs anywhere except `results/`.
 
 ## VERSION CONTROL
