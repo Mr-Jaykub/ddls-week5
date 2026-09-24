@@ -82,7 +82,7 @@ def cluster(cluster: str, gene: str | None = None):
         values = _expression_vector(gene)
         result["expression"] = [{"cell": str(adata.obs_names[i]), "value": float(values[i])} for i in idx]
     if "rank_genes_groups" not in adata.uns:
-        sc.tl.rank_genes_groups(adata, "leiden", method="wilcoxon")
+        sc.tl.rank_genes_groups(adata, "leiden", method="wilcoxon", use_raw=False, layer="counts")
     ranked = adata.uns["rank_genes_groups"]["names"][cluster][:20]
     scores = adata.uns["rank_genes_groups"].get("scores")
     logfoldchanges = adata.uns["rank_genes_groups"].get("logfoldchanges")
@@ -104,6 +104,7 @@ def cluster(cluster: str, gene: str | None = None):
             "rest_detection_pct": float((in_rest > 0).mean() * 100),
             "cluster_median": float(np.median(in_cluster)),
             "rest_median": float(np.median(in_rest)),
+            "pvals_adj": float(pvals_adj[gene][i]) if pvals_adj is not None else None,
         })
     result["top_markers"] = marker_rows
     return result
