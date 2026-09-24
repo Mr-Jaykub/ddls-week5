@@ -82,7 +82,7 @@ def cluster(cluster: str, gene: str | None = None):
         values = _expression_vector(gene)
         result["expression"] = [{"cell": str(adata.obs_names[i]), "value": float(values[i])} for i in idx]
     if "rank_genes_groups" not in adata.uns:
-        sc.tl.rank_genes_groups(adata, "leiden", method="wilcoxon", use_raw=False, layer="counts")
+        sc.tl.rank_genes_groups(adata, "leiden", method="wilcoxon", use_raw=False)
     ranked = adata.uns["rank_genes_groups"]["names"][cluster][:20]
     scores = adata.uns["rank_genes_groups"].get("scores")
     logfoldchanges = adata.uns["rank_genes_groups"].get("logfoldchanges")
