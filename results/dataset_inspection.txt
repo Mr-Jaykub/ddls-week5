@@ -16,6 +16,18 @@ var index unique: True
 leiden categories: ['0', '1', '2', '3', '4', '5', '6', '7']
 mitochondrial genes detected by MT- prefix: 13
 
+Duplicate and doublet-related file contents
+duplicate cell identifiers: 0
+duplicate gene identifiers: 0
+exact duplicate raw-count rows: 0
+No doublet score or doublet annotation was found in obs.
+No dedicated duplicate/barcode provenance or doublet metadata was found.
+
+Existing embeddings and reusable annotations
+X_umap: type=ndarray, shape=(2700, 2)
+No additional embeddings or named cell-type annotations were found.
+The existing X_umap coordinates are reusable for display only, not evidence.
+
 Recomputed per-cluster QC (from layers['counts']); means and medians
          n_cells  n_genes_mean  n_genes_median  total_counts_mean  total_counts_median  pct_mito_mean  pct_mito_median
 cluster                                                                                                               

@@ -72,6 +72,14 @@ def main() -> None:
         )
     statistic_check = pd.DataFrame(statistic_check).set_index("owner_item")
 
+    duplicate_obs_names = int(adata.obs_names.duplicated().sum())
+    duplicate_var_names = int(adata.var_names.duplicated().sum())
+    duplicate_count_rows = int(pd.DataFrame(counts.toarray()).duplicated().sum())
+    embedding_details = []
+    for key, value in adata.obsm.items():
+        shape = getattr(value, "shape", None)
+        embedding_details.append(f"{key}: type={type(value).__name__}, shape={shape}")
+
     lines = [
         "PBMC dataset inspection",
         "=======================",
@@ -86,6 +94,18 @@ def main() -> None:
         f"leiden categories: {list(adata.obs['leiden'].cat.categories)}",
         f"mitochondrial genes detected by MT- prefix: {int(mito.sum())}",
         "",
+        "Duplicate and doublet-related file contents",
+        f"duplicate cell identifiers: {duplicate_obs_names}",
+        f"duplicate gene identifiers: {duplicate_var_names}",
+        f"exact duplicate raw-count rows: {duplicate_count_rows}",
+        "No doublet score or doublet annotation was found in obs.",
+        "No dedicated duplicate/barcode provenance or doublet metadata was found.",
+        "",
+        "Existing embeddings and reusable annotations",
+        *embedding_details,
+        "No additional embeddings or named cell-type annotations were found.",
+        "The existing X_umap coordinates are reusable for display only, not evidence.",
+        "", 
         "Recomputed per-cluster QC (from layers['counts']); means and medians",
         summary.to_string(),
         "",
