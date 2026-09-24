@@ -1,2 +1,2 @@
-cluster7_cells,marker_rows,double_lineage_cells,double_lineage_fraction,T_cell_positive_cells,B_cell_positive_cells,myeloid_positive_cells,NK_cell_positive_cells,platelet_positive_cells
-10,50,10,1.0,7,10,7,9,0
+cluster7_cells,owner_screen_markers,cluster7_multi_lineage_pct,all_cluster_multi_lineage_pct_min,all_cluster_multi_lineage_pct_max,cluster7_cycle_positive,scrublet_status,cluster7_scrublet_doublets,cluster7_scrublet_doublet_pct
+10,146,90.0,41.4985590778098,100.0,10,completed,1,10.0
