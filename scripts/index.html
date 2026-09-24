@@ -26,7 +26,7 @@
             </select>
           </label>
           <label id="geneControl" class="hidden text-sm font-medium">Gene
-            <input id="gene" list="genes" placeholder="e.g. CD3D" class="mt-1 w-full rounded border p-2 uppercase">
+            <input id="gene" list="genes" placeholder="e.g. CD3D" class="mt-1 w-full rounded border p-2">
             <datalist id="genes"></datalist>
           </label>
           <button id="refresh" class="rounded bg-blue-600 px-3 py-2 font-medium text-white">Show cluster cells</button>
@@ -52,7 +52,7 @@ async function loadMeta() {
   await draw();
 }
 async function draw() {
-  const cluster = clusterEl.value, gene = geneEl.value.trim().toUpperCase();
+  const cluster = clusterEl.value, gene = geneEl.value.trim();
   const colour = colourMode.value === 'gene' ? gene : colourMode.value;
   if (colourMode.value === 'gene' && !gene) throw new Error('Choose a gene to colour the map.');
   const [u, c] = await Promise.all([get(`/api/umap?color=${encodeURIComponent(colour)}`), get(`/api/cluster/${cluster}${gene ? `?gene=${encodeURIComponent(gene)}` : ''}`)]);
@@ -70,7 +70,11 @@ async function draw() {
 }
 window.addEventListener('resize', () => Plotly.Plots.resize('plot'));
 colourMode.addEventListener('change', () => { document.querySelector('#geneControl').classList.toggle('hidden', colourMode.value !== 'gene'); draw().catch(e => document.querySelector('#summary').textContent = e.message); });
-document.querySelector('#refresh').addEventListener('click', () => draw().catch(e => document.querySelector('#summary').textContent = e.message)); clusterEl.addEventListener('change', () => draw().catch(e => document.querySelector('#summary').textContent = e.message)); loadMeta().catch(e => document.querySelector('#summary').textContent = e.message);
+function showError(message) {
+  document.querySelector('#summary').innerHTML = `<p class="rounded border border-red-200 bg-red-50 p-2 text-red-700">${message}</p>`;
+}
+async function refresh() { try { await draw(); } catch (e) { showError(`Unable to load gene or cluster: ${e.message}`); } }
+document.querySelector('#refresh').addEventListener('click', refresh); clusterEl.addEventListener('change', refresh); loadMeta().catch(e => showError(e.message));
 </script>
 </body>
 </html>
