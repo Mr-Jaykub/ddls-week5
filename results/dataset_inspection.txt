@@ -1,0 +1,60 @@
+PBMC dataset inspection
+=======================
+adata: AnnData object with n_obs × n_vars = 2700 × 13714
+    obs: 'n_genes', 'total_counts', 'pct_mito', 'leiden'
+    var: 'gene_ids', 'mt', 'n_cells_by_counts', 'mean_counts', 'log1p_mean_counts', 'pct_dropout_by_counts', 'total_counts', 'log1p_total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm'
+    uns: 'hvg'
+    obsm: 'X_umap'
+    layers: 'counts', None (.X)
+shape: (2700, 13714)
+obs columns: ['n_genes', 'total_counts', 'pct_mito', 'leiden']
+var columns: ['gene_ids', 'mt', 'n_cells_by_counts', 'mean_counts', 'log1p_mean_counts', 'pct_dropout_by_counts', 'total_counts', 'log1p_total_counts', 'n_cells', 'highly_variable', 'means', 'dispersions', 'dispersions_norm']
+layers: ['counts', None]
+obsm: ['X_umap']
+obs index unique: True
+var index unique: True
+leiden categories: ['0', '1', '2', '3', '4', '5', '6', '7']
+mitochondrial genes detected by MT- prefix: 13
+
+Recomputed per-cluster QC (from layers['counts'])
+         n_cells  n_genes_mean  total_counts_mean  pct_mito_mean
+cluster                                                         
+0           1197    805.980785        2335.096191       1.963773
+1            489    857.112474        2379.828125       2.451093
+2            445    829.188764        1959.548340       2.508406
+3            347    711.371758        1917.642700       2.259269
+4            163   1214.521472        3665.177979       2.552371
+5             36   1501.472222        5070.388672       1.961658
+6             13    568.692308        1651.076904       1.934865
+7             10   2384.100000        8882.900391       2.369612
+
+Cluster 7 per-cell QC
+                 cluster  n_genes  total_counts  pct_mito
+index                                                    
+ACGTCGCTCCTGAA-1       7     1589        3924.0  1.860347
+ACTTCAACAAGCAA-1       7     1777        5416.0  3.083456
+AGAGGTCTACAGCT-1       7     2798       10762.0  2.620331
+CACCGGGACTTCTA-1       7     1610        4295.0  4.097788
+CCAGTCTGCGGAGA-1       7     3400       15818.0  1.795423
+CGATACGACAGGAG-1       7     2023        6722.0  2.216602
+GCCTCAACTCTTTG-1       7     1954        5981.0  1.120214
+GCGAAGGAGAGCTT-1       7     2703       10275.0  3.377129
+GGCACGTGTGAGAA-1       7     2685       10349.0  1.758624
+TTACTCGAACGTTG-1       7     3302       15287.0  1.766207
+
+Cluster 6 per-cell QC
+                 cluster  n_genes  total_counts  pct_mito
+index                                                    
+ACCCACTGGTTCAG-1       6      338         556.0  1.258993
+ACGAACTGGCTATG-1       6     2413        8875.0  1.577465
+AGTCTTACTTCGGA-1       6      273         663.0  0.754148
+ATCATCTGACACCA-1       6      366         736.0  0.679348
+ATTCAGCTCATTGG-1       6      345         916.0  2.947598
+GACGCTCTCTCTCG-1       6      266         682.0  3.225806
+GAGTTGTGGTAGCT-1       6      849        2405.0  0.914761
+GCGCATCTGGTTAC-1       6      979        2513.0  2.865101
+GGAACACTTCAGAC-1       6      278         623.0  2.889246
+GGCATATGGGGAGT-1       6      212         575.0  1.217391
+GTCATACTTCGCCT-1       6      359         979.0  2.962206
+TAACACCTTGTTTC-1       6      394         999.0  1.101101
+TTACGTACGTTCAG-1       6      321         942.0  2.760085
