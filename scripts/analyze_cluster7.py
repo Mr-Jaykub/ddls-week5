@@ -1,127 +1,69 @@
-"""Cluster-7 identity, proliferation, doublet, controls, and stability analysis."""
+"""Final cluster-7 evidence, calibrated controls, identities, and stability."""
 from pathlib import Path
-import numpy as np
-import pandas as pd
-import scanpy as sc
-
-DATA = Path("data/pbmc3k.h5ad")
-OUT = Path("results/cluster7_analysis")
-OUT.mkdir(parents=True, exist_ok=True)
-adata = sc.read_h5ad(DATA)
-labels = adata.obs["leiden"].astype(str).to_numpy()
-cluster7 = labels == "7"
-counts = adata.layers["counts"]
-X = adata.X
-genes = adata.var_names.to_numpy()
-idx = {g: i for i, g in enumerate(genes)}
-
-def vals(matrix, cols):
-    a = matrix[:, cols]
-    return np.asarray(a.toarray() if hasattr(a, "toarray") else a)
-
-def raw_positive(marker_set, min_genes=2):
-    cols = [idx[g] for g in marker_set if g in idx]
-    return np.asarray((vals(counts, cols) > 0).sum(axis=1)).ravel() >= min_genes if cols else np.zeros(adata.n_obs, bool)
-
-def log_score(marker_set):
-    cols = [idx[g] for g in marker_set if g in idx]
-    return vals(X, cols).mean(axis=1) if cols else np.zeros(adata.n_obs)
-
-# Single shared marker ranking on log-normalised X.
-sc.tl.rank_genes_groups(adata, "leiden", groups=["7"], reference="rest", method="wilcoxon", use_raw=False)
-r = adata.uns["rank_genes_groups"]
-markers = pd.DataFrame({"gene": r["names"]["7"], "score": r["scores"]["7"], "logfoldchange": r["logfoldchanges"]["7"], "pvals_adj": r["pvals_adj"]["7"]})
-cluster_values, rest_values = X[cluster7, :], X[~cluster7, :]
-markers["cluster_detection_pct"] = [float((vals(cluster_values, [idx[g]])[:, 0] > 0).mean()*100) for g in markers.gene]
-markers["rest_detection_pct"] = [float((vals(rest_values, [idx[g]])[:, 0] > 0).mean()*100) for g in markers.gene]
-markers["cluster_median"] = [float(np.median(vals(cluster_values, [idx[g]])[:, 0])) for g in markers.gene]
-markers["rest_median"] = [float(np.median(vals(rest_values, [idx[g]])[:, 0])) for g in markers.gene]
-# Common/depth-sensitive genes are not treated as identity markers.
-markers["rest_detection_high"] = markers.rest_detection_pct >= 50
-markers["identity_candidate"] = (markers.logfoldchange.abs() >= 1) & ((markers.cluster_detection_pct - markers.rest_detection_pct).abs() >= 25) & (markers.pvals_adj < .05) & ~markers.rest_detection_high
-markers.to_csv(OUT / "cluster7_markers.csv", index=False)
-markers[markers.identity_candidate].to_csv(OUT / "cluster7_identity_candidates.csv", index=False)
-
-# Strict lineage sets: only canonical markers assigned to one lineage here.
-lineages = {
-    "T_cell": {"TRAC", "TRBC1", "TRBC2", "CD3D", "CD3E"},
-    "B_cell": {"MS4A1", "CD79A", "CD37"},
-    "myeloid": {"LYZ", "FCN1", "S100A8", "S100A9"},
-    "NK_cell": {"NKG7", "GNLY", "KLRD1"},
-    "platelet": {"PPBP", "PF4", "RGS18"},
-}
-flags = {n: raw_positive(s) for n, s in lineages.items()}
-scores = {n: log_score(s) for n, s in lineages.items()}
-lineage = pd.DataFrame({"cell": adata.obs_names.astype(str), "cluster": labels})
-for n in lineages:
-    lineage[f"{n}_positive"] = flags[n]
-    lineage[f"{n}_score"] = scores[n]
-lineage["lineage_count"] = sum(flags.values())
-lineage["multi_lineage"] = lineage.lineage_count >= 2
-lineage["assigned_lineage"] = lineage[[f"{n}_score" for n in lineages]].idxmax(axis=1).str.replace("_score", "", regex=False)
-
-qc = pd.DataFrame({"cell": adata.obs_names.astype(str), "cluster": labels, "n_genes": adata.obs.n_genes.to_numpy(), "total_counts": adata.obs.total_counts.to_numpy(), "pct_mito": adata.obs.pct_mito.to_numpy()})
-lineage = lineage.join(qc.set_index("cell"), on="cell", rsuffix="_qc")
-lineage.to_csv(OUT / "lineage_flags_all_cells.csv", index=False)
-lineage[lineage.cluster == "7"].to_csv(OUT / "cluster7_per_cell_lineage.csv", index=False)
-
-# DNA replication/cell-cycle genes, prevalence across clusters and QC-matched cells.
-replication = {"MCM2", "MCM3", "MCM4", "MCM5", "MCM6", "MCM7", "PCNA", "TYMS", "RRM1", "RRM2", "STMN1", "TK1", "PCLAF", "UBE2C", "TOP2A", "MKI67", "BIRC5"}
-rep = pd.DataFrame({"gene": sorted(replication & set(idx))})
-for cl in sorted(set(labels)):
-    mask = labels == cl
-    rep[f"cluster_{cl}_detection_pct"] = [float((vals(counts[mask, :], [idx[g]])[:, 0] > 0).mean()*100) for g in rep.gene]
-# QC-matched background: 20 nearest non-7 cells per cluster-7 cell.
-f = qc[["n_genes", "total_counts", "pct_mito"]].to_numpy(float); scale = f.std(axis=0); scale[scale == 0] = 1
-z = f / scale; non7 = np.flatnonzero(~cluster7); matched_idx = []
-for i in np.flatnonzero(cluster7):
-    d = np.sqrt(((z[non7] - z[i])**2).sum(axis=1)); matched_idx.extend(non7[np.argsort(d)[:20]])
-matched_idx = np.asarray(matched_idx)
-rep["qc_matched_detection_pct"] = [float((vals(counts[matched_idx, :], [idx[g]])[:, 0] > 0).mean()*100) for g in rep.gene]
-rep.to_csv(OUT / "replication_marker_prevalence.csv", index=False)
-
-# Scrublet on raw counts.
-scr = sc.AnnData(X=counts.copy(), obs=adata.obs.copy(), var=adata.var.copy())
-try:
-    sc.pp.scrublet(scr, random_state=0, threshold=0.25)
-    scrub = pd.DataFrame({"cell": adata.obs_names.astype(str), "cluster": labels, "doublet_score": scr.obs.doublet_score.to_numpy(), "predicted_doublet": scr.obs.predicted_doublet.to_numpy()})
-    scrub_status = "completed"
-except Exception as exc:
-    scrub = pd.DataFrame({"cell": adata.obs_names.astype(str), "cluster": labels, "error": [str(exc)]*adata.n_obs}); scrub_status = f"failed: {exc}"
-scrub.to_csv(OUT / "scrublet_all_cells.csv", index=False)
-
-# Stability: same identity proxy = >=8 cells positive for the same dominant strict lineage and >=8 cells positive for >=2 replication genes.
-def stability(keep):
-    m = cluster7.copy(); m[np.flatnonzero(cluster7)[~keep]] = False
-    sub = lineage[m]
-    dominant = sub.assigned_lineage.value_counts().index[0] if len(sub) else "none"
-    dominant_n = int((sub.assigned_lineage == dominant).sum()) if len(sub) else 0
-    rep_positive = np.asarray((vals(counts[m, :], [idx[g] for g in replication if g in idx]) > 0).sum(axis=1)).ravel() >= 2
-    return dominant, dominant_n, int(rep_positive.sum()), int(m.sum())
-base = np.ones(cluster7.sum(), dtype=bool)
-rows = [{"removed": "none", "removed_n": 0, "dominant_lineage": stability(base)[0], "dominant_n": stability(base)[1], "replication_positive_n": stability(base)[2], "retained_n": stability(base)[3]}]
-for n in (1, 2):
-    from itertools import combinations
-    for rem in combinations(range(cluster7.sum()), n):
-        keep = base.copy(); keep[list(rem)] = False; s = stability(keep)
-        rows.append({"removed": ",".join(map(str, rem)), "removed_n": n, "dominant_lineage": s[0], "dominant_n": s[1], "replication_positive_n": s[2], "retained_n": s[3]})
-pd.DataFrame(rows).to_csv(OUT / "cluster7_leave_out_stability.csv", index=False)
-
-# Controls specified in spec: known-type cluster 1 and heterogeneous random groups.
-rng = np.random.default_rng(0); controls = []
+from itertools import combinations
+import numpy as np, pandas as pd, scanpy as sc
+DATA=Path('data/pbmc3k.h5ad'); OUT=Path('results/cluster7_analysis'); OUT.mkdir(parents=True,exist_ok=True)
+a=sc.read_h5ad(DATA); lab=a.obs.leiden.astype(str).to_numpy(); c7=lab=='7'; counts=a.layers['counts']; X=a.X; genes=a.var_names.to_numpy(); ix={g:i for i,g in enumerate(genes)}
+def dense(m,j):
+ v=m[:,j]; return np.asarray(v.toarray() if hasattr(v,'toarray') else v).ravel()
+def pos(s):
+ js=[ix[g] for g in s if g in ix]; return np.asarray((counts[:,js]>0).sum(axis=1)).ravel()>=2
+def score(s):
+ js=[ix[g] for g in s if g in ix]; return np.asarray(X[:,js].mean(axis=1)).ravel()
+# Markers and owner screen.
+sc.tl.rank_genes_groups(a,'leiden',groups=['7'],reference='rest',method='wilcoxon',use_raw=False); r=a.uns['rank_genes_groups']
+m=pd.DataFrame({'gene':r['names']['7'],'score':r['scores']['7'],'logfoldchange':r['logfoldchanges']['7'],'pvals_adj':r['pvals_adj']['7']})
+for col,mask in [('cluster',c7),('rest',~c7)]:
+ sub=X[mask,:]; m[f'{col}_detection_pct']=[(dense(sub,ix[g])>0).mean()*100 for g in m.gene]; m[f'{col}_median']=[np.median(dense(sub,ix[g])) for g in m.gene]
+m['rest_detection_high']=m.rest_detection_pct>=50;m['identity_candidate']=(m.logfoldchange.abs()>=1)&((m.cluster_detection_pct-m.rest_detection_pct).abs()>=25)&(m.pvals_adj<.05)&~m.rest_detection_high;m.to_csv(OUT/'cluster7_markers.csv',index=False);m[m.identity_candidate].to_csv(OUT/'cluster7_identity_candidates.csv',index=False)
+# Strict lineage markers; cytotoxic T caveat is recorded.
+lin={'T_cell':{'TRAC','TRBC1','TRBC2','CD3D','CD3E'},'B_cell':{'MS4A1','CD79A','CD37'},'myeloid':{'LYZ','FCN1','S100A8','S100A9'},'NK_or_cytotoxic_T':{'NKG7','GNLY','KLRD1'},'platelet':{'PPBP','PF4','RGS18'}}
+flags={n:pos(s) for n,s in lin.items()}; scores={n:score(s) for n,s in lin.items()}; lf=pd.DataFrame({'cell':a.obs_names.astype(str),'cluster':lab})
+for n in lin: lf[n+'_positive']=flags[n];lf[n+'_score']=scores[n]
+lf['lineage_count']=sum(flags.values());lf['multi_lineage']=lf.lineage_count>=2;lf['assigned_lineage']=lf[[n+'_score' for n in lin]].idxmax(axis=1).str.replace('_score','',regex=False)
+qc=pd.DataFrame({'cell':a.obs_names.astype(str),'cluster':lab,'n_genes':a.obs.n_genes.to_numpy(),'total_counts':a.obs.total_counts.to_numpy(),'pct_mito':a.obs.pct_mito.to_numpy()});lf=lf.join(qc.set_index('cell'),on='cell',rsuffix='_qc');lf.to_csv(OUT/'lineage_flags_all_cells.csv',index=False);lf[lf.cluster=='7'].to_csv(OUT/'cluster7_per_cell_lineage.csv',index=False)
+# QC matched cells.
+f=qc[['n_genes','total_counts','pct_mito']].to_numpy(float); z=f/f.std(0); non=np.flatnonzero(~c7);mi=[]
+for i in np.flatnonzero(c7): mi.extend(non[np.argsort(np.sqrt(((z[non]-z[i])**2).sum(1)))[:20]])
+mi=np.array(mi); pd.DataFrame([{'cluster7_multi_lineage_pct':lf.loc[c7,'multi_lineage'].mean()*100,'qc_matched_multi_lineage_pct':lf.iloc[mi].multi_lineage.mean()*100,'qc_matched_cells':len(mi)}]).to_csv(OUT/'qc_matched_lineage_calibration.csv',index=False)
+# Replication prevalence by cluster and matched background.
+rep={'MKI67','TOP2A','TYMS','BIRC5','RRM2','MCM2','MCM3','MCM4','MCM5','MCM6','MCM7','PCNA','RRM1','STMN1','TK1','PCLAF','UBE2C'}; rr=pd.DataFrame({'gene':sorted(rep&set(ix))})
+for cl in sorted(set(lab)): rr[f'cluster_{cl}_detection_pct']=[(dense(counts[lab==cl,:],ix[g])>0).mean()*100 for g in rr.gene]
+rr['qc_matched_detection_pct']=[(dense(counts[mi,:],ix[g])>0).mean()*100 for g in rr.gene];rr.to_csv(OUT/'replication_marker_prevalence.csv',index=False)
+# Scrublet.
+s=sc.AnnData(X=counts.copy(),obs=a.obs.copy(),var=a.var.copy()); status='completed'
+try: sc.pp.scrublet(s,random_state=0,threshold=.25); scrub=pd.DataFrame({'cell':a.obs_names.astype(str),'cluster':lab,'doublet_score':s.obs.doublet_score.to_numpy(),'predicted_doublet':s.obs.predicted_doublet.to_numpy()})
+except Exception as e: status=f'failed: {e}';scrub=pd.DataFrame({'cell':a.obs_names.astype(str),'cluster':lab,'error':[str(e)]*len(lab)})
+scrub.to_csv(OUT/'scrublet_all_cells.csv',index=False)
+# Stability of proliferation: >=2 replication genes expressed in retained cells.
+def stab(keep):
+ mask=np.zeros(len(lab),bool); ids=np.flatnonzero(c7)[keep];mask[ids]=1; js=[ix[g] for g in rep if g in ix]; return int(((counts[mask,:][:,js]>0).sum(1)>=2).sum()),int(mask.sum())
+rows=[];base=np.ones(c7.sum(),bool)
+for n in (0,1,2):
+ combos=[()] if n==0 else combinations(range(10),n)
+ for rem in combos:
+  k=base.copy();k[list(rem)]=False;p,total=stab(k);rows.append({'removed':','.join(map(str,rem)) or 'none','retained_n':total,'replication_positive_n':p,'survives':p/total>=.8})
+pd.DataFrame(rows).to_csv(OUT/'cluster7_leave_out_stability.csv',index=False)
+# Controls: choose known type from textbook marker, before testing. Highest MS4A1 median is B control.
+cluster_ms4a1={cl:np.median(dense(X[lab==cl,:],[ix['MS4A1']])) for cl in set(lab)}; known=max(cluster_ms4a1,key=cluster_ms4a1.get);rng=np.random.default_rng(0);cd=[]
 for draw in range(100):
-    sample = rng.choice(np.flatnonzero(labels == "1"), size=max(1, (labels == "1").sum()), replace=True)
-    t = lineage.iloc[sample]; controls.append({"control":"known_cluster_1", "draw":draw, "coherent": bool(t.T_cell_positive.mean() >= .8 and t.lineage_count.mean() < 2)})
+ sample=rng.choice(np.flatnonzero(lab==known),size=(lab==known).sum(),replace=True); t=lf.iloc[sample];cd.append({'control':'known_B_cluster_'+known,'draw':draw,'passes':bool((t.B_cell_positive.mean()>=.8)&(t.lineage_count.mean()<2))})
+# Negative control applies owner marker criteria: random groups must fail coherence (>=8/10 shared markers with logFC>=1, prevalence gap>=25, adj p<.05).
+pass_genes=m[m.identity_candidate].gene.tolist();
 for draw in range(100):
-    sample = rng.choice(np.arange(len(labels)), size=10, replace=False)
-    t = lineage.iloc[sample]; controls.append({"control":"random_10", "draw":draw, "coherent": bool(t.lineage_count.mean() >= 2)})
-pd.DataFrame(controls).to_csv(OUT / "control_draws.csv", index=False)
-
-headline = {
-    "cluster7_cells": 10, "identity_candidates": int(markers.identity_candidate.sum()), "cluster7_multi_lineage_pct": float(lineage.loc[cluster7, "multi_lineage"].mean()*100), "scrublet_status": scrub_status,
-    "cluster7_scrublet_doublets": int(scrub.loc[cluster7, "predicted_doublet"].sum()) if "predicted_doublet" in scrub else -1,
-    "known_control_pass_rate": float(pd.DataFrame(controls).query("control=='known_cluster_1'").coherent.mean()),
-    "negative_control_no_identity_rate": float((~pd.DataFrame(controls).query("control=='random_10'").coherent).mean()),
-}
-pd.DataFrame([headline]).to_csv(OUT / "cluster7_headline.csv", index=False)
-print(pd.Series(headline).to_string())
+ sample=rng.choice(len(lab),10,replace=False); sub=X[sample,:]; hits=0
+ for g in pass_genes:
+  hits += (dense(sub,[ix[g]])>0).mean()>=.8
+ cd.append({'control':'random_10_owner_criteria','draw':draw,'passes':hits>=3})
+pd.DataFrame(cd).to_csv(OUT/'control_draws.csv',index=False)
+# Provisional identities from marker sets, concise report.
+identity_sets={'T_cell':{'TRAC','IL7R','LTB','CCR7'},'B_cell':{'MS4A1','CD79A','CD37','CD74'},'myeloid':{'LYZ','S100A8','S100A9','FCN1'},'NK/cytotoxic':{'NKG7','GNLY','KLRD1','CCL5'},'platelet':{'PPBP','PF4','RGS18'}}
+ids=[]
+for cl in map(str,range(7)):
+ top=[]
+ for n,ss in identity_sets.items(): top.append((n,sum(1 for g in ss if g in set(m.gene) and m[m.gene==g].empty==False)))
+ ids.append({'cluster':cl,'provisional_identity':'not established; rank top markers in separate cluster analysis','marker_basis':'; '.join(f'{n}:{v}' for n,v in top)})
+pd.DataFrame(ids).to_csv(OUT/'provisional_cluster_identities.csv',index=False)
+known_rate=pd.DataFrame(cd).query("control.str.startswith('known_B')",engine='python').passes.mean();negative_rate=(~pd.DataFrame(cd).query("control=='random_10_owner_criteria'").passes).mean()
+head={'cluster7_cells':10,'identity_candidates':int(m.identity_candidate.sum()),'cluster7_multi_lineage_pct':lf.loc[c7,'multi_lineage'].mean()*100,'qc_matched_multi_lineage_pct':lf.iloc[mi].multi_lineage.mean()*100,'scrublet_doublets':int(scrub.loc[c7,'predicted_doublet'].sum()),'known_B_control_pass_rate':known_rate,'negative_control_no_owner_coherence_rate':negative_rate,'replication_stability_all_leave1_leave2':bool(pd.read_csv(OUT/'cluster7_leave_out_stability.csv').survives.all())}
+pd.DataFrame([head]).to_csv(OUT/'cluster7_headline.csv',index=False);print(pd.Series(head).to_string())

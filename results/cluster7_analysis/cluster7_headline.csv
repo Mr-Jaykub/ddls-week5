@@ -1,2 +1,2 @@
-cluster7_cells,identity_candidates,cluster7_multi_lineage_pct,scrublet_status,cluster7_scrublet_doublets,known_control_pass_rate,negative_control_no_identity_rate
-10,131,60.0,completed,1,0.0,1.0
+cluster7_cells,identity_candidates,cluster7_multi_lineage_pct,qc_matched_multi_lineage_pct,scrublet_doublets,known_B_control_pass_rate,negative_control_no_owner_coherence_rate,replication_stability_all_leave1_leave2
+10,131,60.0,36.0,1,1.0,1.0,True
