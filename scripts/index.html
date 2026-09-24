@@ -16,7 +16,16 @@
           <label class="text-sm font-medium">Cluster
             <select id="cluster" class="mt-1 w-full rounded border p-2"></select>
           </label>
-          <label class="text-sm font-medium">Gene
+          <label class="text-sm font-medium">Colour map
+            <select id="colourMode" class="mt-1 w-full rounded border p-2">
+              <option value="cluster">Cluster</option>
+              <option value="n_genes">Genes detected</option>
+              <option value="total_counts">Total counts</option>
+              <option value="pct_mito">Mitochondrial %</option>
+              <option value="gene">Gene expression</option>
+            </select>
+          </label>
+          <label id="geneControl" class="hidden text-sm font-medium">Gene
             <input id="gene" list="genes" placeholder="e.g. CD3D" class="mt-1 w-full rounded border p-2 uppercase">
             <datalist id="genes"></datalist>
           </label>
@@ -32,7 +41,7 @@
     </section>
   </main>
 <script>
-const clusterEl = document.querySelector('#cluster'), geneEl = document.querySelector('#gene');
+const clusterEl = document.querySelector('#cluster'), geneEl = document.querySelector('#gene'), colourMode = document.querySelector('#colourMode');
 let selected = null;
 async function get(url) { const r = await fetch(url); if (!r.ok) throw new Error(await r.text()); return r.json(); }
 async function loadMeta() {
@@ -43,16 +52,20 @@ async function loadMeta() {
 }
 async function draw() {
   const cluster = clusterEl.value, gene = geneEl.value.trim().toUpperCase();
-  const [u, c] = await Promise.all([get('/api/umap'), get(`/api/cluster/${cluster}${gene ? `?gene=${encodeURIComponent(gene)}` : ''}`)]);
+  const colour = colourMode.value === 'gene' ? gene : colourMode.value;
+  if (colourMode.value === 'gene' && !gene) throw new Error('Choose a gene to colour the map.');
+  const [u, c] = await Promise.all([get(`/api/umap?color=${encodeURIComponent(colour)}`), get(`/api/cluster/${cluster}${gene ? `?gene=${encodeURIComponent(gene)}` : ''}`)]);
   const points = u.points;
-  Plotly.newPlot('plot', [{x: points.map(p=>p.x), y: points.map(p=>p.y), text: points.map(p=>p.cell), customdata: points.map(p=>p.cluster), mode:'markers', type:'scattergl', marker:{size:6, color:points.map(p=>p.cluster), colorscale:'Viridis'}, hovertemplate:'cell %{text}<br>cluster %{customdata}<extra></extra>'}], {title:'UMAP (display only)', margin:{t:40,l:40,r:10,b:40}, xaxis:{title:'UMAP 1'}, yaxis:{title:'UMAP 2'}});
+  const numeric = u.numeric;
+  Plotly.newPlot('plot', [{x: points.map(p=>p.x), y: points.map(p=>p.y), text: points.map(p=>p.cell), customdata: points.map(p=>[p.cluster, p.value]), mode:'markers', type:'scattergl', marker:{size:6, color:numeric ? points.map(p=>p.value) : points.map(p=>p.cluster), colorscale:'Viridis', showscale:numeric, colorbar:numeric ? {title: colour} : undefined}, hovertemplate:'cell %{text}<br>cluster %{customdata[0]}<br>value %{customdata[1]}<extra></extra>'}], {title:`UMAP (display only) — colour: ${colour}`, margin:{t:40,l:40,r:10,b:40}, xaxis:{title:'UMAP 1'}, yaxis:{title:'UMAP 2'}});
   const q = c.quality;
   document.querySelector('#summary').innerHTML = `<b>Cluster ${cluster}</b><br>${q.length} cells<br>Top markers: ${c.top_markers.join(', ')}`;
   document.querySelector('#cells').innerHTML = '<b>Individual cells</b><br>' + q.map((x,i)=>`${i+1}. ${x.cell}: genes ${x.n_genes}, counts ${x.total_counts}, mito ${x.pct_mito.toFixed(2)}%`).join('<br>');
   if (gene && c.expression) Plotly.newPlot('cellPlot', [{x:c.expression.map(x=>x.cell), y:c.expression.map(x=>x.value), type:'bar'}], {title:`${gene} expression in cluster ${cluster}`, margin:{t:40,l:45,r:10,b:100}, xaxis:{tickangle:-60}});
   else Plotly.purge('cellPlot');
 }
-document.querySelector('#refresh').addEventListener('click', draw); clusterEl.addEventListener('change', draw); loadMeta().catch(e => document.querySelector('#summary').textContent = e.message);
+colourMode.addEventListener('change', () => { document.querySelector('#geneControl').classList.toggle('hidden', colourMode.value !== 'gene'); draw().catch(e => document.querySelector('#summary').textContent = e.message); });
+document.querySelector('#refresh').addEventListener('click', () => draw().catch(e => document.querySelector('#summary').textContent = e.message)); clusterEl.addEventListener('change', () => draw().catch(e => document.querySelector('#summary').textContent = e.message)); loadMeta().catch(e => document.querySelector('#summary').textContent = e.message);
 </script>
 </body>
 </html>

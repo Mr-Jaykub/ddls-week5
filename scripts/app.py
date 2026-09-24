@@ -47,11 +47,19 @@ def meta():
 
 
 @app.get("/api/umap")
-def umap(cluster: str | None = None):
-    mask = np.ones(adata.n_obs, dtype=bool) if cluster is None else _cluster_mask(cluster)
-    coords = np.asarray(adata.obsm["X_umap"])[mask]
-    labels = adata.obs["leiden"].astype(str).to_numpy()[mask]
-    return {"points": [{"cell": str(cell), "x": float(x), "y": float(y), "cluster": label} for cell, (x, y), label in zip(adata.obs_names[mask], coords, labels)]}
+def umap(color: str = Query("cluster")):
+    coords = np.asarray(adata.obsm["X_umap"])
+    labels = adata.obs["leiden"].astype(str).to_numpy()
+    if color == "cluster":
+        values = labels.tolist()
+        numeric = False
+    elif color in {"n_genes", "total_counts", "pct_mito"}:
+        values = adata.obs[color].astype(float).tolist()
+        numeric = True
+    else:
+        values = _expression_vector(color).tolist()
+        numeric = True
+    return {"color": color, "numeric": numeric, "points": [{"cell": str(cell), "x": float(x), "y": float(y), "cluster": label, "value": value} for cell, (x, y), label, value in zip(adata.obs_names, coords, labels, values)]}
 
 
 @app.get("/api/expression/{gene}")
