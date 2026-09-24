@@ -16,17 +16,29 @@ var index unique: True
 leiden categories: ['0', '1', '2', '3', '4', '5', '6', '7']
 mitochondrial genes detected by MT- prefix: 13
 
-Recomputed per-cluster QC (from layers['counts'])
-         n_cells  n_genes_mean  total_counts_mean  pct_mito_mean
-cluster                                                         
-0           1197    805.980785        2335.096191       1.963773
-1            489    857.112474        2379.828125       2.451093
-2            445    829.188764        1959.548340       2.508406
-3            347    711.371758        1917.642700       2.259269
-4            163   1214.521472        3665.177979       2.552371
-5             36   1501.472222        5070.388672       1.961658
-6             13    568.692308        1651.076904       1.934865
-7             10   2384.100000        8882.900391       2.369612
+Recomputed per-cluster QC (from layers['counts']); means and medians
+         n_cells  n_genes_mean  n_genes_median  total_counts_mean  total_counts_median  pct_mito_mean  pct_mito_median
+cluster                                                                                                               
+0           1197    805.980785           808.0        2335.096191               2310.0       1.963773         1.755086
+1            489    857.112474           848.0        2379.828125               2305.0       2.451093         2.252252
+2            445    829.188764           826.0        1959.548340               1954.0       2.508406         2.261092
+3            347    711.371758           671.0        1917.642700               1759.0       2.259269         2.077748
+4            163   1214.521472          1262.0        3665.177979               3781.0       2.552371         2.410099
+5             36   1501.472222          1565.5        5070.388672               5293.0       1.961658         1.956812
+6             13    568.692308           345.0        1651.076904                916.0       1.934865         1.577465
+7             10   2384.100000          2354.0        8882.900391               8498.5       2.369612         2.038474
+
+Owner-number statistic check
+An owner value is not called a mismatch if it matches a mean, median, minimum, or maximum within numerical tolerance.
+                    owner_value         mean       median          min          max  matches_mean  matches_median  matches_min  matches_max
+owner_item                                                                                                                                 
+cluster 7 n_genes        2363.0  2384.100000  2354.000000  1589.000000  3400.000000         False           False        False        False
+cluster 7 pct_mito          2.0     2.369612     2.038474     1.120214     4.097788         False           False        False        False
+cluster 6 n_genes         350.0   568.692308   345.000000   212.000000  2413.000000         False           False        False        False
+cluster 6 pct_mito          1.6     1.934865     1.577465     0.679348     3.225806         False           False        False        False
+cluster 4 n_genes        1263.0  1214.521472  1262.000000   389.000000  1934.000000         False           False        False        False
+cluster 4 pct_mito          2.4     2.552371     2.410099     0.126422    22.569028         False           False        False        False
+cluster 0 n_cells        1197.0  1197.000000  1197.000000  1197.000000  1197.000000          True            True         True         True
 
 Cluster 7 per-cell QC
                  cluster  n_genes  total_counts  pct_mito

@@ -1,4 +1,4 @@
-"""Inspect the supplied PBMC dataset and write a plain-text inspection report."""
+"""Inspect the supplied PBMC dataset and write a reproducible QC report."""
 from pathlib import Path
 
 import numpy as np
@@ -37,9 +37,40 @@ def main() -> None:
     summary = qc.groupby("cluster").agg(
         n_cells=("cluster", "size"),
         n_genes_mean=("n_genes", "mean"),
+        n_genes_median=("n_genes", "median"),
         total_counts_mean=("total_counts", "mean"),
+        total_counts_median=("total_counts", "median"),
         pct_mito_mean=("pct_mito", "mean"),
+        pct_mito_median=("pct_mito", "median"),
     )
+
+    owner_values = {
+        "cluster 7 n_genes": ("7", "n_genes", 2363),
+        "cluster 7 pct_mito": ("7", "pct_mito", 2.0),
+        "cluster 6 n_genes": ("6", "n_genes", 350),
+        "cluster 6 pct_mito": ("6", "pct_mito", 1.6),
+        "cluster 4 n_genes": ("4", "n_genes", 1263),
+        "cluster 4 pct_mito": ("4", "pct_mito", 2.4),
+        "cluster 0 n_cells": ("0", "n_cells", 1197),
+    }
+    statistic_check = []
+    for label, (cluster, metric, owner_value) in owner_values.items():
+        values = qc.loc[qc["cluster"] == cluster, metric] if metric != "n_cells" else pd.Series([len(qc[qc["cluster"] == cluster])])
+        statistic_check.append(
+            {
+                "owner_item": label,
+                "owner_value": owner_value,
+                "mean": float(values.mean()),
+                "median": float(values.median()),
+                "min": float(values.min()),
+                "max": float(values.max()),
+                "matches_mean": bool(np.isclose(values.mean(), owner_value)),
+                "matches_median": bool(np.isclose(values.median(), owner_value)),
+                "matches_min": bool(np.isclose(values.min(), owner_value)),
+                "matches_max": bool(np.isclose(values.max(), owner_value)),
+            }
+        )
+    statistic_check = pd.DataFrame(statistic_check).set_index("owner_item")
 
     lines = [
         "PBMC dataset inspection",
@@ -55,8 +86,12 @@ def main() -> None:
         f"leiden categories: {list(adata.obs['leiden'].cat.categories)}",
         f"mitochondrial genes detected by MT- prefix: {int(mito.sum())}",
         "",
-        "Recomputed per-cluster QC (from layers['counts'])",
+        "Recomputed per-cluster QC (from layers['counts']); means and medians",
         summary.to_string(),
+        "",
+        "Owner-number statistic check",
+        "An owner value is not called a mismatch if it matches a mean, median, minimum, or maximum within numerical tolerance.",
+        statistic_check.to_string(),
         "",
         "Cluster 7 per-cell QC",
         qc[qc["cluster"] == "7"].to_string(),
