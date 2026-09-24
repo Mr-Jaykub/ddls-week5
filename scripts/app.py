@@ -88,8 +88,8 @@ def cluster(cluster: str, gene: str | None = None):
     logfoldchanges = adata.uns["rank_genes_groups"].get("logfoldchanges")
     pvals_adj = adata.uns["rank_genes_groups"].get("pvals_adj")
     marker_rows = []
-    cluster_values = adata[:, mask].X
-    rest_values = adata[:, ~mask].X
+    cluster_values = adata[mask, :].X
+    rest_values = adata[~mask, :].X
     for i, gene in enumerate(ranked):
         gene = str(gene)
         gene_idx = int(np.flatnonzero(adata.var_names.to_numpy() == gene)[0])
