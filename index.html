@@ -11,13 +11,13 @@
   <main class="mx-auto max-w-7xl p-4 sm:p-6">
     <header class="mb-5"><h1 class="text-2xl font-bold">PBMC cluster explorer</h1><p class="text-sm text-slate-600">Explore the existing UMAP and individual cells.</p></header>
     <section class="flex flex-col gap-4 lg:grid lg:grid-cols-[20rem_1fr]">
-      <section class="order-1 min-w-0 rounded-xl bg-white p-2 shadow-sm sm:p-4 lg:order-2">
+      <section class="order-1 min-w-0 rounded-xl bg-white p-2 shadow-sm sm:p-4 lg:order-2 lg:min-h-[48rem]">
         <div id="legend" class="mb-2 text-sm text-slate-600"></div>
         <div id="clusterKey" class="mb-2 flex flex-wrap gap-2 text-xs"></div>
         <div id="plot" class="h-[55vh] min-h-[20rem] w-full"></div>
-        <div id="cellPlot" class="mt-4 h-72"></div>
+        <div id="cellPlot" class="mt-4 h-[42rem] w-full"></div>
       </section>
-      <aside class="order-2 rounded-xl bg-white p-4 shadow-sm lg:order-1">
+      <aside class="order-2 rounded-xl bg-white p-4 shadow-sm lg:order-1 lg:w-[28rem]">
         <div class="grid gap-3">
           <label class="text-sm font-medium">Cluster
             <select id="cluster" class="mt-1 w-full rounded border p-2"></select>
@@ -66,19 +66,21 @@ async function draw() {
   const clusterColours = Object.fromEntries([...new Set(points.map(p => p.cluster))].map((cl, i) => [cl, palette[i % palette.length]]));
   document.querySelector('#clusterKey').innerHTML = Object.entries(clusterColours).map(([cl, colourValue]) => `<span class="inline-flex items-center gap-1"><span class="inline-block h-3 w-3 rounded-full" style="background:${colourValue}"></span>Cluster ${cl}</span>`).join('');
   const markerColours = numeric ? points.map(p=>p.value) : points.map(p=>clusterColours[p.cluster]);
-  Plotly.react('plot', [{x: points.map(p=>p.x), y: points.map(p=>p.y), text: points.map(p=>p.cell), customdata: points.map(p=>[p.cluster, p.value]), mode:'markers', type:'scattergl', marker:{size:points.map((p,i)=>selectedPoints[i] ? 10 : 6), color:markerColours, colorscale:numeric ? 'Viridis' : undefined, showscale:numeric, colorbar:numeric ? {title: colour} : undefined, opacity:points.map((p,i)=>selectedPoints[i] ? 1 : 0.65), line:{color:points.map((p,i)=>selectedPoints[i] ? '#111827' : clusterColours[p.cluster]), width:points.map((p,i)=>selectedPoints[i] ? 2 : 1)}}, hovertemplate:'cell %{text}<br>cluster %{customdata[0]}<br>value %{customdata[1]}<extra></extra>'}], {title:`UMAP (display only) — colour: ${colour}`, autosize:true, margin:{t:40,l:40,r:10,b:40}, xaxis:{title:'UMAP 1'}, yaxis:{title:'UMAP 2'}}, {responsive:true});
+  Plotly.react('plot', [{x: points.map(p=>p.x), y: points.map(p=>p.y), text: points.map(p=>p.cell), customdata: points.map(p=>[p.cluster, p.value]), mode:'markers', type:'scattergl', marker:{size:points.map((p,i)=>selectedPoints[i] ? 10 : 6), color:markerColours, colorscale:numeric ? 'Viridis' : undefined, showscale:numeric, colorbar:numeric ? {title: colour} : undefined, opacity:points.map((p,i)=>selectedPoints[i] ? 1 : 0.65), line:{color:points.map((p,i)=>selectedPoints[i] && !numeric ? '#111827' : 'rgba(0,0,0,0)'), width:points.map((p,i)=>selectedPoints[i] && !numeric ? 2 : 0)}}, hovertemplate:'cell %{text}<br>cluster %{customdata[0]}<br>value %{customdata[1]}<extra></extra>'}], {title:`UMAP — ${colour}`, autosize:true, margin:{t:40,l:40,r:10,b:40}, xaxis:{title:'UMAP 1', zeroline:false}, yaxis:{title:'UMAP 2', zeroline:false}}, {responsive:true, displayModeBar:false});
   const q = c.quality;
-  document.querySelector('#summary').innerHTML = `<b>Cluster ${cluster}</b><br>${q.length} cells<br><span class="font-medium">Top markers</span><div class="mt-1 overflow-x-auto"><table class="w-full text-left text-xs"><thead><tr><th>Gene</th><th>Score</th><th>logFC</th><th>Adj. p</th><th>Detected</th><th>Median</th></tr></thead><tbody>${c.top_markers.map(m => `<tr><td class="pr-2 font-medium">${m.gene}</td><td>${m.score == null ? '—' : m.score.toFixed(2)}</td><td>${m.logfoldchange == null ? '—' : m.logfoldchange.toFixed(2)}</td><td>${m.pvals_adj == null ? '—' : m.pvals_adj.toExponential(2)}</td><td>${m.cluster_detection_pct.toFixed(0)}% / ${m.rest_detection_pct.toFixed(0)}%</td><td>${m.cluster_median.toFixed(2)} / ${m.rest_median.toFixed(2)}</td></tr>`).join('')}</tbody></table><p class="mt-1 text-slate-500">Detected and median values are cluster / rest.</p></div>`;
+  const fmt = (value) => value == null ? '—' : Number(value).toPrecision(3);
+  const pct = (value) => `${Number(value).toFixed(0)}%`;
+  document.querySelector('#summary').innerHTML = `<b>Cluster ${cluster}</b><br>${q.length} cells<br><span class="font-medium">Top markers</span><div class="mt-1 overflow-x-auto"><table class="w-full min-w-[34rem] text-left text-xs whitespace-nowrap"><thead><tr><th>Gene</th><th>Score</th><th>logFC</th><th>Adj. p</th><th>Detected<br>C / R</th><th>Median<br>C / R</th></tr></thead><tbody>${c.top_markers.map(m => `<tr><td class="pr-2 font-medium">${m.gene}</td><td>${fmt(m.score)}</td><td>${fmt(m.logfoldchange)}</td><td>${m.pvals_adj == null ? '—' : Number(m.pvals_adj).toExponential(1)}</td><td>${pct(m.cluster_detection_pct)} / ${pct(m.rest_detection_pct)}</td><td>${fmt(m.cluster_median)} / ${fmt(m.rest_median)}</td></tr>`).join('')}</tbody></table><p class="mt-1 text-slate-500">C = cluster; R = rest.</p></div>`;
   document.querySelector('#cells').innerHTML = `<details><summary class="cursor-pointer font-medium">Individual cells (${q.length})</summary><div class="mt-2 max-h-48 overflow-auto">${q.map((x,i)=>`${i+1}. ${x.cell}: genes ${x.n_genes}, counts ${x.total_counts}, mito ${x.pct_mito.toFixed(2)}%`).join('<br>')}</div></details>`;
   if (gene && c.expression) {
     const byCell = Object.fromEntries(c.quality.map(x => [x.cell, x]));
     const cells = c.expression.map(x => x.cell);
     Plotly.react('cellPlot', [
-      {x:cells, y:c.expression.map(x=>x.value), name:`${gene} expression`, type:'bar', xaxis:'x', yaxis:'y'},
-      {x:cells, y:cells.map(cell => byCell[cell].n_genes), name:'Genes detected', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x2', yaxis:'y2'},
-      {x:cells, y:cells.map(cell => byCell[cell].total_counts), name:'Total counts', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x3', yaxis:'y3'},
-      {x:cells, y:cells.map(cell => byCell[cell].pct_mito), name:'Mitochondrial %', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x4', yaxis:'y4'}
-    ], {title:`${gene} expression and quality in cluster ${cluster}`, margin:{t:40,l:55,r:20,b:55}, grid:{rows:4, columns:1, pattern:'independent'}, xaxis:{showticklabels:false}, xaxis2:{showticklabels:false}, xaxis3:{showticklabels:false}, xaxis4:{tickangle:-60}, yaxis:{title:'Expression'}, yaxis2:{title:'Genes'}, yaxis3:{title:'Counts'}, yaxis4:{title:'Mito %'}, showlegend:true, legend:{orientation:'h', y:-0.22}});
+      {x:cells, y:c.expression.map(x=>x.value), text:cells, name:`${gene} expression`, type:'bar', xaxis:'x', yaxis:'y', hovertemplate:'Cell %{text}<br>Expression: %{y}<extra></extra>'},
+      {x:cells, y:cells.map(cell => byCell[cell].n_genes), text:cells, name:'Genes detected', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x2', yaxis:'y2', hovertemplate:'Cell %{text}<br>Genes: %{y}<extra></extra>'},
+      {x:cells, y:cells.map(cell => byCell[cell].total_counts), text:cells, name:'Total counts', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x3', yaxis:'y3', hovertemplate:'Cell %{text}<br>Counts: %{y}<extra></extra>'},
+      {x:cells, y:cells.map(cell => byCell[cell].pct_mito), text:cells, name:'Mitochondrial %', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x4', yaxis:'y4', hovertemplate:'Cell %{text}<br>Mito: %{y:.2f}%<extra></extra>'}
+    ], {title:`${gene} and QC — cluster ${cluster}`, margin:{t:55,l:70,r:25,b:35}, height:650, grid:{rows:4, columns:1, pattern:'independent'}, xaxis:{showticklabels:false}, xaxis2:{showticklabels:false}, xaxis3:{showticklabels:false}, xaxis4:{tickmode:'array', tickvals:cells, ticktext:cells.map((_,i)=>`Cell ${i+1}`), tickangle:0}, yaxis:{title:'Expression'}, yaxis2:{title:'Genes'}, yaxis3:{title:'Counts'}, yaxis4:{title:'Mito %'}, showlegend:true, legend:{orientation:'h', y:1.04, x:0}} , {responsive:true, displayModeBar:false});
   }
   else Plotly.purge('cellPlot');
   if (document.querySelector('#plot').data) Plotly.Plots.resize('plot');
