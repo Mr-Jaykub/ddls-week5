@@ -10,7 +10,7 @@
 <body class="bg-slate-50 text-slate-900">
   <main class="mx-auto max-w-7xl p-4 sm:p-6">
     <header class="mb-5"><h1 class="text-2xl font-bold">PBMC cluster explorer</h1><p class="text-sm text-slate-600">Explore the existing UMAP and individual cells.</p></header>
-    <section class="flex flex-col gap-4 lg:grid lg:grid-cols-[20rem_1fr]">
+    <section class="flex flex-col gap-4 lg:grid lg:grid-cols-[20rem_1fr] xl:grid-cols-[36rem_1fr]">
       <section class="order-1 min-w-0 rounded-xl bg-white p-2 shadow-sm sm:p-4 lg:order-2 lg:min-h-[48rem]">
         <div id="legend" class="mb-2 text-sm text-slate-600"></div>
         <div id="clusterKey" class="mb-2 flex flex-wrap gap-2 text-xs"></div>
@@ -76,7 +76,7 @@ async function draw() {
     const byCell = Object.fromEntries(c.quality.map(x => [x.cell, x]));
     const cells = c.expression.map(x => x.cell);
     Plotly.react('cellPlot', [
-      {x:cells, y:c.expression.map(x=>x.value), text:cells, name:`${gene} expression`, type:'bar', xaxis:'x', yaxis:'y', texttemplate:'', hovertemplate:'Cell %{text}<br>Expression: %{y}<extra></extra>'},
+      {x:cells, y:c.expression.map(x=>x.value), text:cells, name:`${gene} expression`, type:'bar', xaxis:'x', yaxis:'y', textposition:'none', hovertemplate:'Cell %{text}<br>Expression: %{y}<extra></extra>'},
       {x:cells, y:cells.map(cell => byCell[cell].n_genes), text:cells, name:'Genes detected', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x2', yaxis:'y2', hovertemplate:'Cell %{text}<br>Genes: %{y}<extra></extra>'},
       {x:cells, y:cells.map(cell => byCell[cell].total_counts), text:cells, name:'Total counts', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x3', yaxis:'y3', hovertemplate:'Cell %{text}<br>Counts: %{y}<extra></extra>'},
       {x:cells, y:cells.map(cell => byCell[cell].pct_mito), text:cells, name:'Mitochondrial %', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x4', yaxis:'y4', hovertemplate:'Cell %{text}<br>Mito: %{y:.2f}%<extra></extra>'}
