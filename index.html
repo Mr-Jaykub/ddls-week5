@@ -17,7 +17,7 @@
         <div id="plot" class="h-[55vh] min-h-[20rem] w-full"></div>
         <div id="cellPlot" class="mt-4 h-[42rem] w-full"></div>
       </section>
-      <aside class="order-2 rounded-xl bg-white p-4 shadow-sm lg:order-1 lg:w-[28rem]">
+      <aside class="order-2 rounded-xl bg-white p-4 shadow-sm lg:order-1 lg:w-full">
         <div class="grid gap-3">
           <label class="text-sm font-medium">Cluster
             <select id="cluster" class="mt-1 w-full rounded border p-2"></select>
@@ -76,11 +76,11 @@ async function draw() {
     const byCell = Object.fromEntries(c.quality.map(x => [x.cell, x]));
     const cells = c.expression.map(x => x.cell);
     Plotly.react('cellPlot', [
-      {x:cells, y:c.expression.map(x=>x.value), text:cells, name:`${gene} expression`, type:'bar', xaxis:'x', yaxis:'y', hovertemplate:'Cell %{text}<br>Expression: %{y}<extra></extra>'},
+      {x:cells, y:c.expression.map(x=>x.value), text:cells, name:`${gene} expression`, type:'bar', xaxis:'x', yaxis:'y', texttemplate:'', hovertemplate:'Cell %{text}<br>Expression: %{y}<extra></extra>'},
       {x:cells, y:cells.map(cell => byCell[cell].n_genes), text:cells, name:'Genes detected', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x2', yaxis:'y2', hovertemplate:'Cell %{text}<br>Genes: %{y}<extra></extra>'},
       {x:cells, y:cells.map(cell => byCell[cell].total_counts), text:cells, name:'Total counts', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x3', yaxis:'y3', hovertemplate:'Cell %{text}<br>Counts: %{y}<extra></extra>'},
       {x:cells, y:cells.map(cell => byCell[cell].pct_mito), text:cells, name:'Mitochondrial %', type:'scatter', mode:'markers', marker:{size:8}, xaxis:'x4', yaxis:'y4', hovertemplate:'Cell %{text}<br>Mito: %{y:.2f}%<extra></extra>'}
-    ], {title:`${gene} and QC — cluster ${cluster}`, margin:{t:55,l:70,r:25,b:35}, height:650, grid:{rows:4, columns:1, pattern:'independent'}, xaxis:{showticklabels:false}, xaxis2:{showticklabels:false}, xaxis3:{showticklabels:false}, xaxis4:{tickmode:'array', tickvals:cells, ticktext:cells.map((_,i)=>`Cell ${i+1}`), tickangle:0}, yaxis:{title:'Expression'}, yaxis2:{title:'Genes'}, yaxis3:{title:'Counts'}, yaxis4:{title:'Mito %'}, showlegend:true, legend:{orientation:'h', y:1.04, x:0}} , {responsive:true, displayModeBar:false});
+    ], {title:`${gene} and QC — cluster ${cluster}`, margin:{t:55,l:70,r:25,b:35}, height:650, grid:{rows:4, columns:1, pattern:'independent'}, xaxis:{showticklabels:false}, xaxis2:{showticklabels:false}, xaxis3:{showticklabels:false}, xaxis4:{tickmode:'array', tickvals:cells, ticktext:cells.map((_,i)=>`Cell ${i+1}`), tickangle:0}, yaxis:{title:'Expression'}, yaxis2:{title:'Genes'}, yaxis3:{title:'Counts'}, yaxis4:{title:'Mito %'}, showlegend:false} , {responsive:true, displayModeBar:false});
   }
   else Plotly.purge('cellPlot');
   if (document.querySelector('#plot').data) Plotly.Plots.resize('plot');

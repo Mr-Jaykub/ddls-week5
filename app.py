@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 DATA_PATH = Path("data/pbmc3k.h5ad")
 adata = None
+markers_ready = False
 
 
 def _cluster_mask(cluster: str):
@@ -27,10 +28,13 @@ def _expression_vector(gene: str):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global adata
+    global adata, markers_ready
     adata = sc.read_h5ad(DATA_PATH)
+    sc.tl.rank_genes_groups(adata, "leiden", method="wilcoxon", use_raw=False)
+    markers_ready = True
     yield
     adata = None
+    markers_ready = False
 
 
 app = FastAPI(title="PBMC cluster explorer", lifespan=lifespan)
@@ -81,8 +85,6 @@ def cluster(cluster: str, gene: str | None = None):
     if gene:
         values = _expression_vector(gene)
         result["expression"] = [{"cell": str(adata.obs_names[i]), "value": float(values[i])} for i in idx]
-    if "rank_genes_groups" not in adata.uns:
-        sc.tl.rank_genes_groups(adata, "leiden", method="wilcoxon", use_raw=False)
     ranked = adata.uns["rank_genes_groups"]["names"][cluster][:20]
     scores = adata.uns["rank_genes_groups"].get("scores")
     logfoldchanges = adata.uns["rank_genes_groups"].get("logfoldchanges")
